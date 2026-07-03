@@ -3,15 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>NURU Bags — Create Account</title>
-  <meta name="description" content="Create a new NURU Bags inventory system account." />
+  <title>NIA Bags — Create Account</title>
+  <meta name="description" content="Create a new NIA Bags inventory system account." />
   <link rel="stylesheet" href="style.css?v=202605022" />
+  <link rel="icon" type="image/png" href="/Images/NIA%20Logo_1@4x.png" />
 </head>
 <body>
   <div class="login-page">
     <div class="login-card" style="width:460px; max-width:calc(100vw - 32px);">
       <div class="login-logo">
-        <div class="brand">NURU<span>.</span></div>
+        <div class="brand">NIA<span>.</span></div>
         <p>Inventory Management</p>
       </div>
 
@@ -64,8 +65,12 @@
   </div>
   <script src="app.js?v=202605021"></script>
   <script>
-    initTheme();
-    initRegisterPage();
+    if (typeof initTheme === 'function') {
+      initTheme();
+    }
+    if (typeof initRegisterPage === 'function') {
+      initRegisterPage();
+    }
   </script>
 </body>
 </html>

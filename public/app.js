@@ -1,13 +1,13 @@
 // ========================================
-// NURU BAGS — INVENTORY APP (SECURED)
+// NIA BAGS — INVENTORY APP (SECURED)
 // ========================================
 
 const STORAGE_KEYS = {
-  users:    'nuru_inv_users',
-  items:    'nuru_inv_items',
-  session:  'nuru_inv_session',
-  lockout:  'nuru_inv_lockout',
-  auditLog: 'nuru_inv_audit',
+  users:    'nia_inv_users',
+  items:    'nia_inv_items',
+  session:  'nia_inv_session',
+  lockout:  'nia_inv_lockout',
+  auditLog: 'nia_inv_audit',
 };
 
 // ================================================================
@@ -170,12 +170,33 @@ const DEFAULT_ITEMS = [
   { id: 'i5',  name: 'Full-Grain Cowhide Leather', sku: 'RM-LTH-001', category: 'Raw Materials', qty: 120, unit: 'meters',threshold: 30, notes: 'Primary material. Ethiopian sourced.' },
   { id: 'i6',  name: 'Waxed Canvas',               sku: 'RM-CNV-002', category: 'Raw Materials', qty: 22,  unit: 'meters',threshold: 25, notes: 'Low stock.' },
   { id: 'i7',  name: 'YKK Zippers (Gold)',          sku: 'RM-ZIP-003', category: 'Raw Materials', qty: 500, unit: 'pcs',   threshold: 100,notes: 'Size 5 & 8 mixed.' },
-  { id: 'i8',  name: 'Branded Dust Bags',           sku: 'PK-DST-001', category: 'Packaging',    qty: 80,  unit: 'pcs',   threshold: 50, notes: 'White cotton with NURU logo.' },
+  { id: 'i8',  name: 'Branded Dust Bags',           sku: 'PK-DST-001', category: 'Packaging',    qty: 80,  unit: 'pcs',   threshold: 50, notes: 'White cotton with NIA logo.' },
   { id: 'i9',  name: 'Gift Boxes (Large)',           sku: 'PK-BOX-002', category: 'Packaging',    qty: 30,  unit: 'pcs',   threshold: 40, notes: 'Low stock — reorder.' },
   { id: 'i10', name: 'Brass Hardware Set',           sku: 'RM-HRD-004', category: 'Raw Materials', qty: 200, unit: 'sets',  threshold: 50, notes: 'Buckles, D-rings and studs.' },
 ];
 
 async function initStorage() { }
+
+// ================================================================
+// LOCAL STORAGE HELPERS
+// ================================================================
+function getData(key, defaultValue = null) {
+  try {
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : defaultValue;
+  } catch (err) {
+    console.error('Error reading from localStorage:', err);
+    return defaultValue;
+  }
+}
+
+function setData(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (err) {
+    console.error('Error writing to localStorage:', err);
+  }
+}
 
 // ================================================================
 // AUDIT LOG
@@ -476,7 +497,7 @@ function showToast(msg, type = 'default') {
 // ================================================================
 // LOGIN PAGE
 // ================================================================
-async function initLoginPage() {
+window.initLoginPage = async function() {
   await initStorage();
   redirectIfLoggedIn();
 
@@ -540,7 +561,7 @@ async function initLoginPage() {
 // ================================================================
 // REGISTER PAGE
 // ================================================================
-async function initRegisterPage() {
+window.initRegisterPage = async function() {
   await initStorage();
   redirectIfLoggedIn();
 
@@ -884,6 +905,13 @@ let currentFilters = { search: '', category: 'all', status: 'all' };
 let editingId = null;
 
 function renderInventory() {
+  // Update filters from the HTML inputs
+  const searchEl = document.getElementById('invSearch');
+  const catEl = document.getElementById('invCatFilter');
+  
+  if (searchEl) currentFilters.search = searchEl.value || '';
+  if (catEl) currentFilters.category = catEl.value || 'all';
+  
   applyFilters(getItems());
   updateAlertBadge();
 }
@@ -901,6 +929,10 @@ function applyFilters(items) {
   if (search)          filtered = filtered.filter(i => i.name.toLowerCase().includes(search.toLowerCase()) || i.sku.toLowerCase().includes(search.toLowerCase()));
   if (category !== 'all') filtered = filtered.filter(i => i.category === category);
   if (status   !== 'all') filtered = filtered.filter(i => stockStatus(i) === status);
+  
+  // Sort by SKU in ascending order (Task #4)
+  filtered.sort((a, b) => a.sku.localeCompare(b.sku));
+  
   renderInventoryTable(filtered);
 }
 
@@ -909,7 +941,7 @@ function renderInventoryTable(items) {
   if (!tbody) return;
 
   if (items.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state">
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
       <p>No items match your filters</p><span>Try adjusting your search or filters</span>
     </div></td></tr>`;
@@ -919,11 +951,20 @@ function renderInventoryTable(items) {
   const isAdmin = getSession()?.role === 'admin';
 
   tbody.innerHTML = items.map(item => {
+    // Create image thumbnail HTML
+    let imageHtml = '';
+    if (item.image_url) {
+      imageHtml = `<img src="${item.image_url}" alt="${esc(item.name)}" style="width:50px; height:50px; object-fit:cover; border-radius:6px; border:1px solid var(--border);"/>`;
+    } else {
+      imageHtml = `<span style="color:var(--muted); font-size:12px;">No image</span>`;
+    }
+    
     return `<tr data-id="${item.id}">
       <td><div class="item-name">${esc(item.name)}</div><div class="item-sku">${esc(item.sku)}</div></td>
       <td><span class="badge badge-${catBadge(item.category)}">${esc(item.category)}</span></td>
       ${isAdmin ? `<td>${item.unit_cost ? item.unit_cost.toLocaleString() + ' ETB' : '0.00 ETB'}</td>` : ''}
-      <td>${item.threshold}</td>
+      <td style="font-weight:600;">${item.qty} ${esc(item.unit || 'pcs')}</td>
+      <td>${imageHtml}</td>
       <td>
         <div class="actions">
           <button class="btn btn-secondary btn-sm" onclick="openEditModal('${item.id}')">
@@ -938,6 +979,57 @@ function renderInventoryTable(items) {
     </tr>`;
   }).join('');
 }
+
+// Render inventory with filters
+window.renderInventory = function() {
+  const searchTerm = document.getElementById('invSearch')?.value.toLowerCase() || '';
+  const categoryFilter = document.getElementById('invCatFilter')?.value || 'all';
+  
+  let filtered = _items;
+  
+  // Apply search filter
+  if (searchTerm) {
+    filtered = filtered.filter(item => 
+      item.name.toLowerCase().includes(searchTerm) || 
+      item.sku.toLowerCase().includes(searchTerm)
+    );
+  }
+  
+  // Apply category filter
+  if (categoryFilter !== 'all') {
+    filtered = filtered.filter(item => item.category === categoryFilter);
+  }
+  
+  // Sort by SKU ascending
+  filtered.sort((a, b) => a.sku.localeCompare(b.sku));
+  
+  renderInventoryTable(filtered);
+};
+
+// Helper functions
+function getItems() {
+  return _items || [];
+}
+
+function esc(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function catBadge(category) {
+  const map = {
+    'Products': 'product',
+    'Trim': 'trim',
+    'Fabric': 'fabric',
+    'Raw Materials': 'raw',
+    'Packaging': 'pack',
+    'Other': 'other'
+  };
+  return map[category] || 'other';
+}
+
 
 // ================================================================
 // SECURITY LOGS
@@ -977,14 +1069,92 @@ window.renderSecurityLog = async function() {
 };
 
 // --- Add/Edit Modal ---
+let currentImageData = null;
+
+window.previewImage = function(input) {
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+    
+    // Task #1: Validate file size (max 2MB to prevent DB issues)
+    const maxSize = 2 * 1024 * 1024; // 2MB
+    if (file.size > maxSize) {
+      showToast('Image too large! Please choose an image smaller than 2MB.', 'error');
+      input.value = '';
+      return;
+    }
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      showToast('Please select a valid image file.', 'error');
+      input.value = '';
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      currentImageData = e.target.result;
+      document.getElementById('previewImg').src = e.target.result;
+      document.getElementById('imagePreview').style.display = 'block';
+    };
+    reader.onerror = function() {
+      showToast('Failed to read image file.', 'error');
+      input.value = '';
+    };
+    reader.readAsDataURL(file);
+  }
+};
+
+window.removeImage = function() {
+  currentImageData = null;
+  document.getElementById('f-image').value = '';
+  document.getElementById('imagePreview').style.display = 'none';
+};
+
+// Task #2 & #6: Toggle image field and quantity field based on category
+window.toggleImageField = function() {
+  const category = document.getElementById('f-category').value;
+  const imageGroup = document.getElementById('f-image').closest('.form-group');
+  const qtyGroup = document.getElementById('initial-qty-group');
+  
+  if (category === 'Products') {
+    // Products: show image, hide quantity
+    if (imageGroup) {
+      imageGroup.style.display = 'block';
+      document.getElementById('f-image').disabled = false;
+    }
+    if (qtyGroup) qtyGroup.style.display = 'none';
+  } else if (category === 'Trim' || category === 'Fabric') {
+    // Trim/Fabric: hide image, show quantity
+    if (imageGroup) {
+      imageGroup.style.display = 'none';
+      document.getElementById('f-image').disabled = true;
+      removeImage(); // Clear any selected image
+    }
+    if (qtyGroup) qtyGroup.style.display = 'block';
+  } else {
+    // Other: hide both
+    if (imageGroup) {
+      imageGroup.style.display = 'none';
+      document.getElementById('f-image').disabled = true;
+      removeImage();
+    }
+    if (qtyGroup) qtyGroup.style.display = 'none';
+  }
+};
+
 function openAddModal() {
   editingId = null;
+  currentImageData = null;
   document.getElementById('modalTitle').textContent = 'Add New Item';
   document.getElementById('itemForm').reset();
+  document.getElementById('imagePreview').style.display = 'none';
   
   const isAdmin = getSession()?.role === 'admin';
   const costGroup = document.getElementById('f-unit-cost').closest('.form-group');
   if (costGroup) costGroup.style.display = isAdmin ? 'block' : 'none';
+  
+  // Task #2 & #6: Set initial visibility based on default category
+  toggleImageField();
   
   document.getElementById('itemModal').classList.add('open');
 }
@@ -992,6 +1162,7 @@ function openEditModal(id) {
   const item = getItems().find(i => i.id === id);
   if (!item) return;
   editingId = id;
+  currentImageData = null;
   document.getElementById('modalTitle').textContent = 'Edit Item';
   document.getElementById('f-name').value      = item.name;
   document.getElementById('f-sku').value       = item.sku;
@@ -1005,10 +1176,112 @@ function openEditModal(id) {
   
   document.getElementById('f-threshold').value = item.threshold;
   document.getElementById('f-notes').value     = item.notes || '';
+  
+  // Show existing image if available
+  if (item.image_url) {
+    currentImageData = item.image_url;
+    document.getElementById('previewImg').src = item.image_url;
+    document.getElementById('imagePreview').style.display = 'block';
+  } else {
+    document.getElementById('imagePreview').style.display = 'none';
+  }
+  
+  // Task #2 & #6: Set field visibility based on category
+  toggleImageField();
+  
   document.getElementById('itemModal').classList.add('open');
 }
+
+// Task #1: Image upload handling with 10MB limit
+// (currentImageData is already declared at line 992)
+
+window.previewImage = async function(input) {
+  const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+  
+  if (!input.files || !input.files[0]) return;
+  
+  const file = input.files[0];
+  
+  if (file.size > MAX_SIZE) {
+    showToast(`Image too large! Maximum size is 10MB. Your file is ${(file.size / (1024 * 1024)).toFixed(2)}MB`, 'error');
+    input.value = ''; 
+    return;
+  }
+  
+  if (!file.type.startsWith('image/')) {
+    showToast('Please select a valid image file (JPG, PNG, GIF, etc.)', 'error');
+    input.value = '';
+    return;
+  }
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      // Compress the image before saving
+      const canvas = document.createElement('canvas');
+      const MAX_DIMENSION = 600;
+      let width = img.width;
+      let height = img.height;
+      
+      if (width > height) {
+        if (width > MAX_DIMENSION) {
+          height *= MAX_DIMENSION / width;
+          width = MAX_DIMENSION;
+        }
+      } else {
+        if (height > MAX_DIMENSION) {
+          width *= MAX_DIMENSION / height;
+          height = MAX_DIMENSION;
+        }
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      // Get compressed data URL
+      currentImageData = canvas.toDataURL('image/jpeg', 0.7);
+      document.getElementById('previewImg').src = currentImageData;
+      document.getElementById('imagePreview').style.display = 'block';
+    };
+    img.src = e.target.result;
+  };
+  reader.onerror = function() {
+    showToast('Failed to read image file', 'error');
+    input.value = '';
+  };
+  reader.readAsDataURL(file);
+};
+
+window.removeImage = function() {
+  currentImageData = null;
+  document.getElementById('f-image').value = '';
+  document.getElementById('imagePreview').style.display = 'none';
+  document.getElementById('previewImg').src = '';
+};
+
+window.toggleImageField = function() {
+  const category = document.getElementById('f-category').value;
+  const qtyGroup = document.getElementById('initial-qty-group');
+  
+  // Task: Image field available for all categories (optional)
+  // No need to hide it anymore - it's optional for all
+  
+  // Initial quantity only for Trim/Fabric
+  if (qtyGroup) {
+    if (category === 'Trim' || category === 'Fabric') {
+      qtyGroup.style.display = 'block';
+    } else {
+      qtyGroup.style.display = 'none';
+    }
+  }
+};
+
 function closeModal() {
   document.getElementById('itemModal').classList.remove('open');
+  currentImageData = null;
   editingId = null;
 }
 
@@ -1021,29 +1294,123 @@ async function saveItem() {
   const skuErr = validateSKU(skuRaw);
   if (skuErr) { showToast(skuErr, 'error'); return; }
 
+  // Task #3: Check for duplicate SKU
+  const existingItem = _items.find(i => i.sku.toUpperCase() === skuRaw && i.id !== editingId);
+  if (existingItem) {
+    showToast('SKU already exists! Each SKU must be unique.', 'error');
+    return;
+  }
+
   const unitRaw = sanitizeText(document.getElementById('f-unit').value);
   if (unitRaw !== 'pcs' && unitRaw !== 'meters') {
     showToast('Invalid unit selected. Must be pcs or meters.', 'error');
     return;
   }
 
+  const category = document.getElementById('f-category').value;
+  
+  // Calculate initial qty based on category
+  let initialQty = 0;
+  if (editingId) {
+    initialQty = _items.find(i => i.id === editingId)?.qty || 0;
+  } else {
+    if (category === 'Trim' || category === 'Fabric') {
+      initialQty = parseFloat(document.getElementById('f-initial-qty').value) || 0;
+    }
+  }
+
   const data = {
     name:      nameRaw,
     sku:       skuRaw,
-    category:  document.getElementById('f-category').value,
-    qty:       editingId ? (_items.find(i => i.id === editingId)?.qty || 0) : 0,
+    category:  category,
+    qty:       initialQty,
     unit:      unitRaw,
     unit_cost: parseFloat(document.getElementById('f-unit-cost').value) || 0,
     threshold: Math.max(0, parseInt(document.getElementById('f-threshold').value) || 0),
     notes:     sanitizeText(document.getElementById('f-notes').value, 500),
+    image_url: currentImageData || null
   };
 
-  if (editingId) { await updateItem(editingId, data); showToast('Item updated!', 'success'); }
-  else           { await addItem(data);               showToast('Item added!',   'success'); }
+  try {
+    if (editingId) { await updateItem(editingId, data); showToast('Item updated!', 'success'); }
+    else           { await addItem(data);               showToast('Item added!',   'success'); }
+    
+    closeModal();
+    renderInventory();
+    renderOverview();
+  } catch (err) {
+    console.error('Save error:', err);
+    showToast(err.message || 'Failed to save item', 'error');
+  }
+}
 
-  closeModal();
-  renderInventory();
-  renderOverview();
+// API functions for items
+async function addItem(data) {
+  try {
+    console.log('Adding item with data:', data);
+    console.log('Session:', getSession());
+    console.log('Headers:', apiHeaders());
+    
+    const res = await fetch('/api/items', {
+      method: 'POST',
+      headers: apiHeaders(),
+      body: JSON.stringify(data)
+    });
+    
+    console.log('Response status:', res.status);
+    console.log('Response headers:', res.headers.get('content-type'));
+    
+    // Check if response is JSON
+    const contentType = res.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      console.error('Server returned non-JSON response');
+      const textResponse = await res.text();
+      console.error('Response body:', textResponse);
+      throw new Error('Server error - please check if you are logged in');
+    }
+    
+    const responseData = await res.json();
+    console.log('Response data:', responseData);
+    
+    if (!res.ok) {
+      throw new Error(responseData.error || 'Failed to add item');
+    }
+    
+    await fetchAllData(); // Refresh data
+    return responseData;
+  } catch (err) {
+    console.error('Add item error:', err);
+    throw err;
+  }
+}
+
+async function updateItem(id, data) {
+  try {
+    const res = await fetch(`/api/items/${id}`, {
+      method: 'PUT',
+      headers: apiHeaders(),
+      body: JSON.stringify(data)
+    });
+    
+    // Check if response is JSON
+    const contentType = res.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      console.error('Server returned non-JSON response:', res.status);
+      throw new Error('Server error - please check if you are logged in');
+    }
+    
+    const responseData = await res.json();
+    
+    if (!res.ok) {
+      throw new Error(responseData.error || 'Failed to update item');
+    }
+    
+    await fetchAllData(); // Refresh data
+    return responseData;
+  } catch (err) {
+    console.error('Update item error:', err);
+    throw err;
+  }
 }
 
 // --- Stock Adjustment Modal ---
@@ -1298,7 +1665,7 @@ window.exportCSV = function() {
   
   const a = document.createElement('a');
   a.setAttribute('href', url);
-  a.setAttribute('download', `nuru_inventory_${new Date().toISOString().split('T')[0]}.csv`);
+  a.setAttribute('download', `nia_inventory_${new Date().toISOString().split('T')[0]}.csv`);
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -1603,7 +1970,7 @@ window.adjustProductStock = async function(productId, action) {
   if (!item) return;
 
   if (action === 'sub') {
-    // Standard stock subtraction
+    // Task #4: Standard stock subtraction
     if (item.qty < amount) return showToast('Insufficient stock to subtract', 'error');
     try {
       const res = await fetch('/api/items/stock', {
@@ -1611,7 +1978,10 @@ window.adjustProductStock = async function(productId, action) {
         headers: apiHeaders(),
         body: JSON.stringify({ item_id: productId, type: 'out', amount: amount, notes: 'Manual Product Subtraction' })
       });
-      if (!res.ok) throw new Error('Failed to subtract stock');
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to subtract stock');
+      }
       inputEl.value = '';
       showToast('Stock subtracted successfully', 'success');
       await fetchAllData();
@@ -1675,6 +2045,7 @@ window.renderProductStock = function() {
         </div>
         <div class="dash-accordion-body">
           <div class="dash-accordion-content">
+            ${p.image_url ? `<div style="margin-bottom:16px;"><img src="${esc(p.image_url)}" alt="${esc(p.name)}" style="max-width:300px; max-height:300px; border-radius:8px; border:2px solid var(--border); display:block;"/></div>` : ''}
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
               <div style="display:flex; gap:24px;">
                 <div>
@@ -1761,8 +2132,8 @@ window.openProductionModal = function() {
   stageContainer.innerHTML = stages.map((s, i) => `
     <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px; align-items:center; background:var(--bg); padding:10px; border-radius:6px; border:1px solid var(--border);">
       <div style="font-weight:600; font-size:13px;">${s}</div>
-      <input type="date" class="stage-start" data-stage="${s}" onchange="updateProductionSummary()" style="padding:6px; font-size:12px; border:1px solid var(--border); border-radius:4px; font-family:inherit;">
-      <input type="date" class="stage-end" data-stage="${s}" onchange="updateProductionSummary()" style="padding:6px; font-size:12px; border:1px solid var(--border); border-radius:4px; font-family:inherit;">
+      <input type="date" class="stage-start" data-stage="${s}" data-index="${i}" onchange="validateStageDates(this); updateProductionSummary()" style="padding:6px; font-size:12px; border:1px solid var(--border); border-radius:4px; font-family:inherit;">
+      <input type="date" class="stage-end" data-stage="${s}" data-index="${i}" onchange="validateStageDates(this); updateProductionSummary()" style="padding:6px; font-size:12px; border:1px solid var(--border); border-radius:4px; font-family:inherit;">
     </div>
   `).join('');
 
@@ -1862,6 +2233,104 @@ window.updateProductionSummary = function() {
   }
 };
 
+// Task #15 & #2: Real-time date validation for production stages with overlap detection
+window.validateStageDates = function(inputElement) {
+  const row = inputElement.closest('div[style*="grid-template-columns"]');
+  if (!row) return;
+  
+  const startInput = row.querySelector('.stage-start');
+  const endInput = row.querySelector('.stage-end');
+  
+  if (!startInput || !endInput) return;
+  
+  const startDate = startInput.value;
+  const endDate = endInput.value;
+  const currentIndex = parseInt(startInput.dataset.index);
+  
+  // Validate within same stage: end date must be >= start date
+  if (startDate && endDate) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    if (end < start) {
+      // Show error
+      endInput.style.borderColor = 'var(--danger)';
+      endInput.style.borderWidth = '2px';
+      showToast('End date cannot be before start date!', 'error');
+      
+      // Reset the end date
+      endInput.value = '';
+      setTimeout(() => {
+        endInput.style.borderColor = '';
+        endInput.style.borderWidth = '';
+      }, 2000);
+      return;
+    }
+  }
+  
+  // Task #2: Validate against other stages to prevent overlaps
+  const allStageRows = Array.from(document.querySelectorAll('#prod-stages-container > div'));
+  
+  for (let i = 0; i < allStageRows.length; i++) {
+    const stageRow = allStageRows[i];
+    const stageStart = stageRow.querySelector('.stage-start').value;
+    const stageEnd = stageRow.querySelector('.stage-end').value;
+    const stageIndex = parseInt(stageRow.querySelector('.stage-start').dataset.index);
+    const stageName = stageRow.children[0].textContent;
+    
+    if (!stageStart || !stageEnd || stageIndex === currentIndex) continue;
+    
+    const thisStageStart = new Date(stageStart);
+    const thisStageEnd = new Date(stageEnd);
+    
+    // Check if current stage (that's being edited) has conflicts with this stage
+    if (stageIndex === currentIndex - 1) {
+      // Previous stage: its end date must be <= our start date
+      if (startDate) {
+        const ourStart = new Date(startDate);
+        if (thisStageEnd > ourStart) {
+          startInput.style.borderColor = 'var(--danger)';
+          startInput.style.borderWidth = '2px';
+          showToast(`${row.children[0].textContent} cannot start before ${stageName} ends!`, 'error');
+          startInput.value = '';
+          setTimeout(() => {
+            startInput.style.borderColor = '';
+            startInput.style.borderWidth = '';
+          }, 2000);
+          return;
+        }
+      }
+    } else if (stageIndex === currentIndex + 1) {
+      // Next stage: our end date must be <= its start date
+      if (endDate) {
+        const ourEnd = new Date(endDate);
+        if (ourEnd > thisStageStart) {
+          endInput.style.borderColor = 'var(--danger)';
+          endInput.style.borderWidth = '2px';
+          showToast(`${row.children[0].textContent} cannot end after ${stageName} starts!`, 'error');
+          endInput.value = '';
+          setTimeout(() => {
+            endInput.style.borderColor = '';
+            endInput.style.borderWidth = '';
+          }, 2000);
+          return;
+        }
+      }
+    }
+  }
+  
+  // Valid date range - clear any error styling
+  startInput.style.borderColor = '';
+  startInput.style.borderWidth = '';
+  endInput.style.borderColor = '';
+  endInput.style.borderWidth = '';
+  
+  // Set min attribute on end date based on start date
+  if (startDate && inputElement.classList.contains('stage-start')) {
+    endInput.setAttribute('min', startDate);
+  }
+};
+
 function formatDuration(d1, d2) {
   const diff = d2 - d1;
   const days = Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1;
@@ -1904,22 +2373,54 @@ window.saveProduction = async function() {
     }
   });
 
+  // Task #7: Validate sufficient stock for materials
+  for (let mat of materials) {
+    const item = _items.find(i => i.id === mat.material_id);
+    if (item && item.qty < mat.consumed_qty) {
+      showToast(`Insufficient stock for ${item.name}! Available: ${item.qty}, Required: ${mat.consumed_qty}`, 'error');
+      return;
+    }
+  }
+
   const stages = [];
   document.querySelectorAll('#prod-stages-container > div').forEach(row => {
     const name = row.children[0].textContent;
     const start = row.querySelector('.stage-start').value;
     const end = row.querySelector('.stage-end').value;
     if (start && end) {
+      // Task #9: Validate no date overlaps
+      const startDate = new Date(start);
+      const endDate = new Date(end);
+      if (endDate < startDate) {
+        showToast(`Invalid dates for ${name}: End date cannot be before start date`, 'error');
+        return;
+      }
       stages.push({
         stage_name: name,
         start_date: start,
         end_date: end,
-        duration: formatDuration(new Date(start), new Date(end))
+        duration: formatDuration(startDate, endDate)
       });
     }
   });
 
   if (stages.length === 0) return showToast('Please enter dates for at least one stage', 'error');
+
+  // Task #9: Check for overlapping stages
+  // Stages must be in sequence - each stage must end before or on the day the next begins
+  for (let i = 0; i < stages.length - 1; i++) {
+    const currentEnd = new Date(stages[i].end_date);
+    const nextStart = new Date(stages[i + 1].start_date);
+    
+    // Set both dates to midnight for proper day comparison
+    currentEnd.setHours(0, 0, 0, 0);
+    nextStart.setHours(0, 0, 0, 0);
+    
+    if (currentEnd > nextStart) {
+      showToast(`Stage dates overlap! ${stages[i].stage_name} ends (${stages[i].end_date}) after ${stages[i + 1].stage_name} starts (${stages[i + 1].start_date}).`, 'error');
+      return;
+    }
+  }
 
   const totalDuration = document.getElementById('prod-summary-duration').textContent;
 
@@ -1929,7 +2430,10 @@ window.saveProduction = async function() {
       headers: apiHeaders(),
       body: JSON.stringify({ product_id: productId, produced_qty: producedQty, total_duration: totalDuration, materials, stages })
     });
-    if (!res.ok) throw new Error('Failed to save production batch');
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.error || 'Failed to save production batch');
+    }
     showToast('Production entry saved and inventory updated!', 'success');
     closeProductionModal();
     await fetchAllData();
@@ -2092,7 +2596,7 @@ window.renderMovements = function renderMovements() {
 window.initTheme = function() {
   // Always start in light mode by default on every load
   document.documentElement.setAttribute('data-theme', 'light');
-  localStorage.setItem('nuru_theme', 'light');
+  localStorage.setItem('nia_theme', 'light');
   
   const themeBtn = document.getElementById('themeToggleBtn');
   if (themeBtn && !themeBtn.dataset.listenerAdded) {
@@ -2102,7 +2606,7 @@ window.initTheme = function() {
       const current = document.documentElement.getAttribute('data-theme');
       const next = current === 'dark' ? 'light' : 'dark';
       document.documentElement.setAttribute('data-theme', next);
-      localStorage.setItem('nuru_theme', next);
+      localStorage.setItem('nia_theme', next);
       
       // Re-render charts if on reports page
       const reportsPage = document.getElementById('page-reports');
@@ -2110,6 +2614,20 @@ window.initTheme = function() {
         setTimeout(renderReports, 50);
       }
     });
+  }
+};
+
+// Password visibility toggle function
+window.togglePw = function(inputId, button) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  
+  if (input.type === 'password') {
+    input.type = 'text';
+    button.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>';
+  } else {
+    input.type = 'password';
+    button.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>';
   }
 };
 

@@ -3,15 +3,49 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>NURU Bags — Inventory Login</title>
-  <meta name="description" content="NURU Bags internal inventory management system login." />
+  <title>NIA Bags — Inventory Login</title>
+  <meta name="description" content="NIA Bags internal inventory management system login." />
   <link rel="stylesheet" href="style.css?v=202605022" />
+  <link rel="icon" type="image/png" href="/Images/NIA%20Logo_1@4x.png" />
+  <style>
+    /* Use the same cream background as dashboard */
+    body {
+      background: #f6eee3;
+      min-height: 100vh;
+    }
+    
+    /* Login page centered */
+    .login-page {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    /* Clean white login card */
+    .login-card {
+      position: relative;
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      max-width: 420px;
+      width: 90%;
+      padding: 40px;
+    }
+  </style>
 </head>
 <body>
+  <!-- Video Background (add your video file here) -->
+  <!-- <video class="background-video" autoplay muted loop playsinline>
+    <source src="/videos/beams.webm" type="video/webm">
+    <source src="/videos/beams.mp4" type="video/mp4">
+  </video> -->
+  
   <div class="login-page">
     <div class="login-card">
       <div class="login-logo">
-        <div class="brand">NURU<span>.</span></div>
+        <div class="brand">NIA<span>.</span></div>
         <p>Inventory Management</p>
       </div>
 
@@ -46,10 +80,30 @@
       </p>
     </div>
   </div>
-  <script src="app.js?v=202605021"></script>
+  
+  <script src="app.js?v=202605023"></script>
   <script>
-    initTheme();
-    initLoginPage();
+    console.log('Script loaded');
+    console.log('initTheme available:', typeof initTheme);
+    console.log('initLoginPage available:', typeof initLoginPage);
+    console.log('togglePw available:', typeof togglePw);
+    
+    // Initialize theme first
+    if (typeof initTheme === 'function') {
+      console.log('Calling initTheme');
+      initTheme();
+    } else {
+      console.error('initTheme is not a function');
+    }
+    
+    // Initialize login page
+    if (typeof initLoginPage === 'function') {
+      console.log('Calling initLoginPage');
+      initLoginPage();
+    } else {
+      console.error('initLoginPage is not a function');
+    }
   </script>
 </body>
 </html>
+

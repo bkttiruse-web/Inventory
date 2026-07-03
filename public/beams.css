@@ -1,0 +1,43 @@
+/* Beams Animation Styles */
+.beams-background {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+  background: #A7D8FF !important; /* Fallback background color */
+}
+
+.beams-background canvas {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+/* Ensure login content is above the animation */
+.login-page {
+  position: relative !important;
+  z-index: 1 !important;
+  min-height: 100vh !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: transparent !important;
+}
+
+.login-card {
+  position: relative !important;
+  z-index: 10 !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15) !important;
+  max-width: 420px !important;
+  width: 90% !important;
+  padding: 40px !important;
+}

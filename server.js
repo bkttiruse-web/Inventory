@@ -8,23 +8,29 @@ const db = require('./db.js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'nuru_super_secret_key_123';
+const JWT_SECRET = process.env.JWT_SECRET || 'nia_super_secret_key_123';
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Serve the frontend automatically inside /public
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/Images', express.static(path.join(__dirname, 'Images')));
 
 // JWT Middleware
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
     
-    if (!token) return res.sendStatus(401);
+    if (!token) {
+        return res.status(401).json({ error: 'Authentication required' });
+    }
     
     jwt.verify(token, JWT_SECRET, (err, user) => {
-        if (err) return res.sendStatus(403);
+        if (err) {
+            return res.status(403).json({ error: 'Invalid or expired token' });
+        }
         req.user = user;
         next();
     });
@@ -153,34 +159,42 @@ app.get('/api/items', authenticateToken, async (req, res) => {
 
 app.post('/api/items', authenticateToken, async (req, res) => {
     try {
-        const { name, sku, category, qty, unit, threshold, unit_cost, notes } = req.body;
+        const { name, sku, category, qty, unit, threshold, unit_cost, notes, image_url } = req.body;
+        
+        // Task #3: Check for duplicate SKU
+        const existing = await db.get('SELECT id FROM items WHERE UPPER(sku) = UPPER(?)', [sku]);
+        if (existing) {
+            return res.status(400).json({ error: 'SKU already exists. Each SKU must be unique.' });
+        }
+        
         const id = 'i' + Date.now();
         const isAdmin = req.user.role === 'admin';
         
         // Staff cannot set cost
         const actualCost = isAdmin ? (unit_cost || 0) : 0;
 
-        await db.run('INSERT INTO items (id, name, sku, category, qty, unit, threshold, unit_cost, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', 
-            [id, name, sku, category, qty, unit, threshold, actualCost, notes]);
+        await db.run('INSERT INTO items (id, name, sku, category, qty, unit, threshold, unit_cost, notes, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', 
+            [id, name, sku, category, qty, unit, threshold, actualCost, notes, image_url || null]);
         
         res.json({ id });
     } catch (err) {
+        console.error(err);
         res.status(500).json({ error: 'Internal error' });
     }
 });
 
 app.put('/api/items/:id', authenticateToken, async (req, res) => {
     try {
-        const { name, sku, category, qty, unit, threshold, unit_cost, notes } = req.body;
+        const { name, sku, category, qty, unit, threshold, unit_cost, notes, image_url } = req.body;
         const isAdmin = req.user.role === 'admin';
         
         if (isAdmin) {
-            await db.run(`UPDATE items SET name=?, sku=?, category=?, qty=?, unit=?, threshold=?, unit_cost=?, notes=? WHERE id=?`, 
-                [name, sku, category, qty, unit, threshold, unit_cost || 0, notes, req.params.id]);
+            await db.run(`UPDATE items SET name=?, sku=?, category=?, qty=?, unit=?, threshold=?, unit_cost=?, notes=?, image_url=? WHERE id=?`, 
+                [name, sku, category, qty, unit, threshold, unit_cost || 0, notes, image_url || null, req.params.id]);
         } else {
             // Staff cannot update cost
-            await db.run(`UPDATE items SET name=?, sku=?, category=?, qty=?, unit=?, threshold=?, notes=? WHERE id=?`, 
-                [name, sku, category, qty, unit, threshold, notes, req.params.id]);
+            await db.run(`UPDATE items SET name=?, sku=?, category=?, qty=?, unit=?, threshold=?, notes=?, image_url=? WHERE id=?`, 
+                [name, sku, category, qty, unit, threshold, notes, image_url || null, req.params.id]);
         }
         
         res.json({ success: true });
@@ -402,6 +416,12 @@ app.get('/api/batches', authenticateToken, async (req, res) => {
 app.post('/api/batches', authenticateToken, async (req, res) => {
     try {
         const { product_id, produced_qty, total_duration, materials, stages } = req.body;
+        
+        // Validate required fields
+        if (!product_id || !produced_qty) {
+            return res.status(400).json({ error: 'Product and quantity are required' });
+        }
+        
         const user = req.user ? req.user.username : 'anonymous';
         const created_at = new Date().toISOString();
 
@@ -414,41 +434,46 @@ app.post('/api/batches', authenticateToken, async (req, res) => {
         // Look up product name for logging and identification
         // product_id might be an ID or a Name string
         let productItem = await db.get('SELECT * FROM items WHERE id = ? OR name = ? OR sku = ?', [product_id, product_id, product_id]);
-        const productName = productItem ? productItem.name : product_id;
-        const actualProductId = productItem ? productItem.id : product_id;
+        if (!productItem) {
+            return res.status(404).json({ error: 'Product not found' });
+        }
+        const productName = productItem.name;
+        const actualProductId = productItem.id;
 
         await db.run('INSERT INTO product_batches VALUES (?, ?, ?, ?, ?, ?)',
             [batch_id, actualProductId, batch_number, produced_qty, total_duration, created_at]);
 
         // Increment stock for the product produced
-        if (productItem) {
-            await db.run('UPDATE items SET qty = qty + ? WHERE id = ?', [produced_qty, productItem.id]);
-        }
+        await db.run('UPDATE items SET qty = qty + ? WHERE id = ?', [produced_qty, productItem.id]);
 
         // Insert materials + deduct inventory by item ID + log each deduction
-        for (let m of materials) {
-            const mId = 'bm' + Math.random().toString(36).substr(2, 9);
-            await db.run('INSERT INTO batch_materials VALUES (?, ?, ?, ?, ?, ?, ?)',
-                [mId, batch_id, m.material_id, m.type, m.consumed_qty, m.unit_cost || 0, m.total_cost || 0]);
+        if (materials && Array.isArray(materials)) {
+            for (let m of materials) {
+                const mId = 'bm' + Math.random().toString(36).substr(2, 9);
+                await db.run('INSERT INTO batch_materials VALUES (?, ?, ?, ?, ?, ?, ?)',
+                    [mId, batch_id, m.material_id, m.type, m.consumed_qty, m.unit_cost || 0, m.total_cost || 0]);
 
-            // Subtract from items using id
-            await db.run('UPDATE items SET qty = MAX(0, qty - ?) WHERE id = ?', [m.consumed_qty, m.material_id]);
+                // Subtract from items using id
+                await db.run('UPDATE items SET qty = MAX(0, qty - ?) WHERE id = ?', [m.consumed_qty, m.material_id]);
 
-            // Log each material deduction
-            const matItem = await db.get('SELECT name FROM items WHERE id = ?', [m.material_id]);
-            const matName = matItem ? matItem.name : m.material_id;
-            const moduleName = m.type === 'trim' ? 'Trim' : 'Fabric';
-            await db.run('INSERT INTO audit (ts, event, detail, "user") VALUES (?, ?, ?, ?)',
-                [created_at, `Output | ${moduleName}`,
-                 `Consumed ${m.consumed_qty} of ${matName} for Batch #${batch_number} (${productName})`,
-                 user]);
+                // Log each material deduction
+                const matItem = await db.get('SELECT name FROM items WHERE id = ?', [m.material_id]);
+                const matName = matItem ? matItem.name : m.material_id;
+                const moduleName = m.type === 'trim' ? 'Trim' : 'Fabric';
+                await db.run('INSERT INTO audit (ts, event, detail, "user") VALUES (?, ?, ?, ?)',
+                    [created_at, `Output | ${moduleName}`,
+                     `Consumed ${m.consumed_qty} of ${matName} for Batch #${batch_number} (${productName})`,
+                     user]);
+            }
         }
 
         // Insert stages
-        for (let s of stages) {
-            const sId = 'bs' + Math.random().toString(36).substr(2, 9);
-            await db.run('INSERT INTO batch_stages VALUES (?, ?, ?, ?, ?, ?)',
-                [sId, batch_id, s.stage_name, s.start_date, s.end_date, s.duration]);
+        if (stages && Array.isArray(stages)) {
+            for (let s of stages) {
+                const sId = 'bs' + Math.random().toString(36).substr(2, 9);
+                await db.run('INSERT INTO batch_stages VALUES (?, ?, ?, ?, ?, ?)',
+                    [sId, batch_id, s.stage_name, s.start_date, s.end_date, s.duration]);
+            }
         }
 
         // Log the overall batch creation
@@ -459,8 +484,8 @@ app.post('/api/batches', authenticateToken, async (req, res) => {
 
         res.json({ success: true, batch_id, batch_number });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Internal error' });
+        console.error('Batch creation error:', err);
+        res.status(500).json({ error: err.message || 'Failed to save production batch' });
     }
 });
 

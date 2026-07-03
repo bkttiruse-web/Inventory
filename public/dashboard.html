@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>NURU Bags — Inventory Dashboard</title>
-  <meta name="description" content="NURU Bags internal inventory management dashboard." />
+  <title>NIA Bags — Inventory Dashboard</title>
+  <meta name="description" content="NIA Bags internal inventory management dashboard." />
   <link rel="stylesheet" href="style.css?v=202605022" />
+  <link rel="icon" type="image/png" href="/Images/NIA%20Logo_1@4x.png" />
 </head>
 <body>
 
@@ -18,7 +19,7 @@
   <aside class="sidebar">
     <div class="sidebar-brand" style="display:flex; justify-content:space-between; align-items:center;">
       <div>
-        <div class="brand-name">NURU<span>.</span></div>
+        <div class="brand-name">NIA<span>.</span></div>
         <div class="brand-sub">Inventory System</div>
       </div>
       <button class="mobile-menu-btn" onclick="toggleMobileMenu()" aria-label="Close Menu">
@@ -48,20 +49,8 @@
 
       <div class="nav-item" data-page="inventory" onclick="navigateTo('inventory')">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-        Material List
+        Materials
         <span class="nav-badge" id="alertBadge" style="display:none">0</span>
-      </div>
-
-
-      
-      <div class="nav-item" data-page="trims" onclick="navigateTo('trims')">
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.121 14.121L19 19m-4.879-4.879l-4.242-4.242m4.242 4.242L11.293 17m2.828-2.828l2.828-2.828m-7.071 7.071L7.05 16.95m7.071-7.071L9.172 4.929M4.929 9.172l4.243 4.243m0 0L4.93 17.657"/></svg>
-        Trims
-      </div>
-      
-      <div class="nav-item" data-page="fabrics" onclick="navigateTo('fabrics')">
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
-        Fabrics
       </div>
 
       <div class="nav-section-label">Data</div>
@@ -114,7 +103,7 @@
         </button>
         <div>
           <h1 id="topbarTitle">Overview</h1>
-          <p id="topbarSub">NURU Bags · Inventory Management</p>
+          <p id="topbarSub">NIA Bags · Inventory Management</p>
         </div>
       </div>
       <div class="topbar-actions" style="display:flex; align-items:center; gap:16px;">
@@ -255,7 +244,7 @@
           <table>
             <thead>
               <tr>
-                <th>Material Details</th><th>Type</th><th class="admin-only">Unit Cost</th><th>Stock Limit</th><th>Actions</th>
+                <th>Material Details</th><th>Type</th><th class="admin-only">Unit Cost</th><th>Quantity</th><th>Image</th><th>Actions</th>
               </tr>
             </thead>
             <tbody id="invTbody"><tr><td colspan="4"><div class="empty-state"><p>Loading…</p></div></td></tr></tbody>
@@ -459,7 +448,7 @@
         <div class="form-row">
           <div class="form-group">
             <label for="f-category">Category</label>
-            <select id="f-category">
+            <select id="f-category" onchange="toggleImageField()">
               <option value="Products">Products</option>
               <option value="Trim">Raw Material — Trim</option>
               <option value="Fabric">Raw Material — Fabric</option>
@@ -485,9 +474,30 @@
             <input type="number" id="f-threshold" min="0" max="999999" placeholder="Alert when qty ≤ this"/>
           </div>
         </div>
+        <div class="form-group" id="initial-qty-group" style="display:none;">
+          <label for="f-initial-qty">Initial Quantity <span style="font-size:11px;color:var(--muted);">(For Trim/Fabric only)</span></label>
+          <input type="number" id="f-initial-qty" min="0" step="0.01" placeholder="Enter starting quantity"/>
+        </div>
         <div class="form-group">
           <label for="f-notes">Notes</label>
           <textarea id="f-notes" placeholder="Optional notes…" maxlength="500"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="f-image">Item Image <span style="font-size:11px;color:var(--muted);">(Optional - for all items)</span></label>
+          <div style="position:relative;">
+            <input type="file" id="f-image" accept="image/*" onchange="previewImage(this)" style="display:none;"/>
+            <label for="f-image" class="file-upload-btn" style="display:inline-flex; align-items:center; gap:8px; padding:12px 20px; background:linear-gradient(135deg, var(--accent), #4F9AFF); color:white; border:none; border-radius:8px; cursor:pointer; font-family:inherit; font-weight:600; font-size:14px; transition:all 0.2s; box-shadow:0 2px 8px rgba(79, 154, 255, 0.3);">
+              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+              <span>Choose Image</span>
+              <span style="font-size:11px; opacity:0.9;">(Max 10MB)</span>
+            </label>
+          </div>
+          <div id="imagePreview" style="margin-top:12px; display:none;">
+            <img id="previewImg" src="" alt="Preview" style="max-width:200px; max-height:200px; border-radius:8px; border:2px solid var(--border);"/>
+            <button type="button" onclick="removeImage()" style="display:block; margin-top:8px; padding:4px 12px; background:var(--danger); color:white; border:none; border-radius:4px; cursor:pointer; font-size:12px;">Remove Image</button>
+          </div>
         </div>
       </form>
     </div>
