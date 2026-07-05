@@ -220,12 +220,12 @@
       </div>
     </div>
 
-    <!-- ===== MATERIAL LIST (MASTER DATA) PAGE ===== -->
+    <!-- ===== MATERIALS (MASTER) PAGE (Inventory) ===== -->
     <div class="page" id="page-inventory">
       <div class="card">
         <div class="card-header">
           <span class="card-title">Material Master List</span>
-          <div class="filter-bar">
+          <div class="filter-bar" style="flex-wrap:wrap; gap:8px;">
             <input type="text" id="invSearch" class="search-input" placeholder="Search by name or code..." onkeyup="renderInventory()">
             <select id="invCatFilter" onchange="renderInventory()">
               <option value="all">All Types</option>
@@ -234,6 +234,10 @@
               <option value="Fabric">Fabrics</option>
               <option value="Others">Others</option>
             </select>
+            <button class="btn btn-secondary" onclick="openRestockModal()" style="border-color:var(--success); color:var(--success);">
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              Restock
+            </button>
             <button class="btn btn-primary" onclick="openAddModal()">
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
               Add Material
@@ -247,18 +251,24 @@
                 <th>Material Details</th><th>Type</th><th class="admin-only">Unit Cost</th><th>Quantity</th><th>Image</th><th>Actions</th>
               </tr>
             </thead>
-            <tbody id="invTbody"><tr><td colspan="4"><div class="empty-state"><p>Loading…</p></div></td></tr></tbody>
+            <tbody id="invTbody"><tr><td colspan="6"><div class="empty-state"><p>Loading…</p></div></td></tr></tbody>
           </table>
         </div>
       </div>
     </div>
 
     <!-- ===== PRODUCTS (STOCK) PAGE ===== -->
-    <div class="page" id="page-products" style="width:100%; max-width:900px; margin: 0 auto; padding-top:16px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:40px;">
+    <div class="page" id="page-products" style="padding-top:16px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:12px;">
         <h2 style="margin-bottom:0; color:var(--text);">Products in Stock</h2>
+        <div style="display:flex; gap:12px;">
+          <button class="btn btn-primary" onclick="openSaleModal()">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+            Log Sale
+          </button>
+        </div>
       </div>
-      <div id="productsAccordionContainer"></div>
+      <div class="product-grid" id="productCardContainer"></div>
     </div>
 
     <!-- ===== PRODUCTION (BATCHES) PAGE ===== -->
@@ -287,7 +297,6 @@
           
           <div class="reports-tabs" style="display:flex; gap:16px; border-bottom:1px solid var(--border); width:100%; background:var(--dark); padding:10px 20px; border-radius:12px 12px 0 0;">
             <button class="tab-btn active" style="background:none; border:none; padding-bottom:8px; border-bottom:2px solid var(--primary); font-weight:600; cursor:pointer; color:white;" onclick="switchReportTab('monthly', this)">Monthly Report</button>
-            <button class="tab-btn" style="background:none; border:none; padding-bottom:8px; border-bottom:2px solid transparent; font-weight:600; cursor:pointer; color:white;" onclick="switchReportTab('product', this)">Product List</button>
             <button class="tab-btn" style="background:none; border:none; padding-bottom:8px; border-bottom:2px solid transparent; font-weight:600; cursor:pointer; color:white;" onclick="switchReportTab('trim', this)">Trim Report</button>
             <button class="tab-btn" style="background:none; border:none; padding-bottom:8px; border-bottom:2px solid transparent; font-weight:600; cursor:pointer; color:white;" onclick="switchReportTab('fabric', this)">Fabric Report</button>
             <button class="tab-btn" style="background:none; border:none; padding-bottom:8px; border-bottom:2px solid transparent; font-weight:600; cursor:pointer; color:white;" onclick="switchReportTab('production', this)">Production Report</button>
@@ -475,7 +484,7 @@
           </div>
         </div>
         <div class="form-group" id="initial-qty-group" style="display:none;">
-          <label for="f-initial-qty">Initial Quantity <span style="font-size:11px;color:var(--muted);">(For Trim/Fabric only)</span></label>
+          <label for="f-initial-qty">Initial Quantity <span style="font-size:11px;color:var(--muted);">(For new items with existing stock)</span></label>
           <input type="number" id="f-initial-qty" min="0" step="0.01" placeholder="Enter starting quantity"/>
         </div>
         <div class="form-group">
@@ -752,11 +761,13 @@
           <h4 style="font-size:14px; font-weight:700; text-transform:uppercase; color:var(--muted); letter-spacing:.5px;">🧵 Trim Usage</h4>
           <button type="button" class="btn btn-secondary btn-sm" onclick="addProductionTrimRow()">+ Add Trim</button>
         </div>
-        <div id="prod-trim-rows">
-          <div style="display:grid; grid-template-columns: 2fr 1fr 1fr 1fr 30px; gap:8px; padding:0 0 8px 0; font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase;">
-            <div>Type/color</div><div>Quantity</div><div>Unit Cost</div><div>Total</div><div></div>
+        <div class="prod-material-scroll-wrapper">
+          <div id="prod-trim-rows">
+            <div style="display:grid; grid-template-columns: 2fr 1fr 1fr 1fr 30px; gap:8px; padding:0 0 8px 0; font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase;">
+              <div>Type/color</div><div>Quantity</div><div>Unit Cost</div><div>Total</div><div></div>
+            </div>
+            <div style="font-size:13px; color:var(--muted); padding:8px 0;">Click "+ Add Trim" to log trim usage.</div>
           </div>
-          <div style="font-size:13px; color:var(--muted); padding:8px 0;">Click "+ Add Trim" to log trim usage.</div>
         </div>
       </div>
 
@@ -766,11 +777,13 @@
           <h4 style="font-size:14px; font-weight:700; text-transform:uppercase; color:var(--muted); letter-spacing:.5px;">🧵 Fabric Usage</h4>
           <button type="button" class="btn btn-secondary btn-sm" onclick="addProductionFabricRow()">+ Add Fabric</button>
         </div>
-        <div id="prod-fabric-rows">
-          <div style="display:grid; grid-template-columns: 2fr 1fr 1fr 1fr 30px; gap:8px; padding:0 0 8px 0; font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase;">
-            <div>Type/color</div><div>Quantity</div><div>Unit Cost</div><div>Total</div><div></div>
+        <div class="prod-material-scroll-wrapper">
+          <div id="prod-fabric-rows">
+            <div style="display:grid; grid-template-columns: 2fr 1fr 1fr 1fr 30px; gap:8px; padding:0 0 8px 0; font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase;">
+              <div>Type/color</div><div>Quantity</div><div>Unit Cost</div><div>Total</div><div></div>
+            </div>
+            <div style="font-size:13px; color:var(--muted); padding:8px 0;">Click "+ Add Fabric" to log fabric usage.</div>
           </div>
-          <div style="font-size:13px; color:var(--muted); padding:8px 0;">Click "+ Add Fabric" to log fabric usage.</div>
         </div>
       </div>
 
@@ -804,6 +817,64 @@
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeProductionModal()">Cancel</button>
       <button class="btn btn-primary" onclick="saveProduction()">Save Production Entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SALE MODAL ===== -->
+<div class="modal-overlay" id="saleModal">
+  <div class="modal" style="max-width:700px; width:95%; max-height:90vh; display:flex; flex-direction:column;">
+    <div class="modal-header">
+      <h3>Log a Sale</h3>
+      <button class="modal-close" onclick="closeSaleModal()">×</button>
+    </div>
+    <div class="modal-body" style="flex:1; overflow-y:auto;">
+      <div class="form-group" style="margin-bottom:16px;">
+        <label for="sale-buyer">Buyer Name *</label>
+        <input type="text" id="sale-buyer" placeholder="e.g. Customer Name or Order ID" maxlength="100"/>
+      </div>
+      <p style="font-size:13px; font-weight:600; color:var(--muted); margin-bottom:12px; text-transform:uppercase; letter-spacing:.5px;">Select Products</p>
+      <div class="item-card-grid" id="saleProductGrid">
+        <!-- Rendered by JS -->
+      </div>
+      <div id="saleSelectedItems" style="margin-top:16px; display:none;">
+        <p style="font-size:13px; font-weight:700; color:var(--text); margin-bottom:10px;">Set Quantities</p>
+        <div id="saleQtyRows"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeSaleModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSale()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        Confirm Sale
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== RESTOCK MODAL ===== -->
+<div class="modal-overlay" id="restockModal">
+  <div class="modal" style="max-width:700px; width:95%; max-height:90vh; display:flex; flex-direction:column;">
+    <div class="modal-header">
+      <h3>Restock Materials</h3>
+      <button class="modal-close" onclick="closeRestockModal()">×</button>
+    </div>
+    <div class="modal-body" style="flex:1; overflow-y:auto;">
+      <p style="font-size:13px; font-weight:600; color:var(--muted); margin-bottom:12px; text-transform:uppercase; letter-spacing:.5px;">Select Trim / Fabric to Restock</p>
+      <div class="item-card-grid" id="restockMaterialGrid">
+        <!-- Rendered by JS -->
+      </div>
+      <div id="restockSelectedItems" style="margin-top:16px; display:none;">
+        <p style="font-size:13px; font-weight:700; color:var(--text); margin-bottom:10px;">Enter Restock Quantities</p>
+        <div id="restockQtyRows"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeRestockModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveRestock()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        Confirm Restock
+      </button>
     </div>
   </div>
 </div>

@@ -1266,12 +1266,9 @@ window.toggleImageField = function() {
   const category = document.getElementById('f-category').value;
   const qtyGroup = document.getElementById('initial-qty-group');
   
-  // Task: Image field available for all categories (optional)
-  // No need to hide it anymore - it's optional for all
-  
-  // Initial quantity only for Trim/Fabric
+  // Initial quantity for Trim, Fabric, AND Products
   if (qtyGroup) {
-    if (category === 'Trim' || category === 'Fabric') {
+    if (category === 'Trim' || category === 'Fabric' || category === 'Products') {
       qtyGroup.style.display = 'block';
     } else {
       qtyGroup.style.display = 'none';
@@ -1314,7 +1311,7 @@ async function saveItem() {
   if (editingId) {
     initialQty = _items.find(i => i.id === editingId)?.qty || 0;
   } else {
-    if (category === 'Trim' || category === 'Fabric') {
+    if (category === 'Trim' || category === 'Fabric' || category === 'Products') {
       initialQty = parseFloat(document.getElementById('f-initial-qty').value) || 0;
     }
   }
@@ -1992,16 +1989,19 @@ window.adjustProductStock = async function(productId, action) {
       showToast(e.message, 'error');
     }
   } else {
-    // Add stock = Log new simplified batch
+    // Add stock via simple stock-in endpoint (not production)
     try {
-      const res = await fetch('/api/products/batch', {
+      const res = await fetch('/api/items/stock', {
         method: 'POST',
         headers: apiHeaders(),
-        body: JSON.stringify({ product_id: item.sku, produced_qty: amount })
+        body: JSON.stringify({ item_id: productId, type: 'in', amount: amount, notes: 'Product stock added' })
       });
-      if (!res.ok) throw new Error('Failed to add stock & create batch');
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to add stock');
+      }
       inputEl.value = '';
-      showToast('Stock added & Batch logged successfully', 'success');
+      showToast('Stock added successfully', 'success');
       await fetchAllData();
       renderProductStock();
       renderInventory();
@@ -2013,77 +2013,41 @@ window.adjustProductStock = async function(productId, action) {
 }
 
 window.renderProductStock = function() {
-  const container = document.getElementById('productsAccordionContainer');
+  const container = document.getElementById('productCardContainer');
   if (!container) return;
   
   const products = _items.filter(i => i.category === 'Products');
   if (products.length === 0) {
-    container.innerHTML = '<div class="empty-state"><p>No products found in inventory.</p></div>';
+    container.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><p>No products found. Add products in the Material Master List.</p></div>';
     return;
   }
 
   container.innerHTML = products.map(p => {
-    // Determine the latest batch number based on _batches
-    const productBatches = _batches.filter(b => b.product_id === p.id || b.product_id === p.sku || b.product_id === p.name);
-    let latestBatchNum = 0;
-    if (productBatches.length > 0) {
-      latestBatchNum = Math.max(...productBatches.map(b => b.batch_number));
-    }
-    const currentBatchDisplay = latestBatchNum > 0 ? `#${latestBatchNum.toString().padStart(3, '0')}` : 'No Batches Yet';
-
+    const imgHtml = p.image_url
+      ? `<img src="${esc(p.image_url)}" alt="${esc(p.name)}"/>`
+      : `<div class="no-img">📦</div>`;
+    const stockColor = p.qty <= 0 ? 'var(--danger)' : p.qty <= p.threshold ? 'var(--warning)' : 'var(--success)';
     return `
-      <div class="dash-accordion prod-acc" id="p-acc-${p.id}">
-        <div class="dash-accordion-header" onclick="toggleProductAccordion('p-acc-${p.id}')">
-          <div class="dash-accordion-title">
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-            ${esc(p.name)}
-          </div>
-          <div style="display:flex; align-items:center; gap:16px;">
-            <span class="dash-accordion-stat">${p.qty} in stock</span>
-            <svg class="dash-accordion-chevron" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-          </div>
+      <div class="product-card" id="pcard-${p.id}" onclick="toggleProductCardSelect('${p.id}')">
+        <div class="product-card-img">${imgHtml}</div>
+        <div class="product-card-check">
+          <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
         </div>
-        <div class="dash-accordion-body">
-          <div class="dash-accordion-content">
-            ${p.image_url ? `<div style="margin-bottom:16px;"><img src="${esc(p.image_url)}" alt="${esc(p.name)}" style="max-width:300px; max-height:300px; border-radius:8px; border:2px solid var(--border); display:block;"/></div>` : ''}
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
-              <div style="display:flex; gap:24px;">
-                <div>
-                  <div style="font-size:12px; color:var(--muted); font-weight:600; text-transform:uppercase;">Product SKU</div>
-                  <div style="font-size:16px; font-weight:600;">${esc(p.sku)}</div>
-                </div>
-                <div>
-                  <div style="font-size:12px; color:var(--muted); font-weight:600; text-transform:uppercase;">Latest Batch</div>
-                  <div style="font-size:16px; font-weight:600; color:var(--primary);">${currentBatchDisplay}</div>
-                </div>
-              </div>
-              <div style="display:flex; gap:8px; align-items:center;">
-                <input type="number" id="adj-prod-${p.id}" placeholder="Qty" style="width:80px; padding:8px; border:1px solid var(--border); border-radius:4px; font-family:inherit;">
-                <button class="btn btn-secondary" style="border-color:var(--success); color:var(--success);" onclick="adjustProductStock('${p.id}', 'add')">
-                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Add
-                </button>
-                <button class="btn btn-secondary" style="border-color:var(--danger); color:var(--danger);" onclick="adjustProductStock('${p.id}', 'sub')">
-                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg> Subtract
-                </button>
-              </div>
-            </div>
-          </div>
+        <div class="product-card-body">
+          <div class="product-card-name">${esc(p.name)}</div>
+          <div class="product-card-sku">${esc(p.sku)}</div>
+          <div class="product-card-qty" style="color:${stockColor}">${p.qty} in stock</div>
         </div>
       </div>
     `;
   }).join('');
-}
-
-window.toggleProductAccordion = function(id) {
-  const allAcc = document.querySelectorAll('.dash-accordion.prod-acc');
-  const target = document.getElementById(id);
-  if (target.classList.contains('open')) {
-    target.classList.remove('open');
-  } else {
-    allAcc.forEach(acc => acc.classList.remove('open'));
-    target.classList.add('open');
-  }
 };
+
+window.toggleProductCardSelect = function(id) {
+  // Cards just show the product; actual selection happens in the Sale modal
+};
+
+window.toggleProductAccordion = function(id) {};
 
 // ================================================================
 // PRODUCTION REPORT (BATCHES)
@@ -2594,9 +2558,8 @@ window.renderMovements = function renderMovements() {
 };
 
 window.initTheme = function() {
-  // Always start in light mode by default on every load
-  document.documentElement.setAttribute('data-theme', 'light');
-  localStorage.setItem('nia_theme', 'light');
+  const savedTheme = localStorage.getItem('nia_theme') || 'light';
+  document.documentElement.setAttribute('data-theme', savedTheme);
   
   const themeBtn = document.getElementById('themeToggleBtn');
   if (themeBtn && !themeBtn.dataset.listenerAdded) {
@@ -2634,3 +2597,272 @@ window.togglePw = function(inputId, button) {
 window.addEventListener('DOMContentLoaded', () => {
   // Global DOM init if needed
 });
+// ================================================================
+// SALE MODAL LOGIC
+// ================================================================
+let saleSelectedItems = new Set();
+
+window.openSaleModal = function() {
+  const modal = document.getElementById('saleModal');
+  const grid = document.getElementById('saleProductGrid');
+  const buyerIn = document.getElementById('sale-buyer');
+  
+  if (buyerIn) buyerIn.value = '';
+  saleSelectedItems.clear();
+  
+  const products = _items.filter(i => i.category === 'Products');
+  if (products.length === 0) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><p>No products available to sell.</p></div>';
+  } else {
+    grid.innerHTML = products.map(p => {
+      const imgHtml = p.image_url ? `<img src="${esc(p.image_url)}" alt="${esc(p.name)}" style="width:100%; height:100%; object-fit:cover;"/>` : `<div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%; background:var(--bg); font-size:24px;">📦</div>`;
+      const stockColor = p.qty <= 0 ? 'var(--danger)' : p.qty <= p.threshold ? 'var(--warning)' : 'var(--success)';
+      return `
+        <div class="product-card" id="sale-card-${p.id}" onclick="toggleSaleProduct('${p.id}')">
+          <div style="aspect-ratio:1/1; position:relative;">
+            ${imgHtml}
+          </div>
+          <div class="product-card-check">
+            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+          </div>
+          <div class="product-card-body">
+            <div class="product-card-name">${esc(p.name)}</div>
+            <div class="product-card-qty" style="color:${stockColor}">${p.qty} avail</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+  
+  renderSaleSelectedItems();
+  modal.classList.add('open');
+};
+
+window.closeSaleModal = function() {
+  document.getElementById('saleModal').classList.remove('open');
+};
+
+window.toggleSaleProduct = function(id) {
+  const card = document.getElementById(`sale-card-${id}`);
+  if (saleSelectedItems.has(id)) {
+    saleSelectedItems.delete(id);
+    card.classList.remove('selected');
+  } else {
+    saleSelectedItems.add(id);
+    card.classList.add('selected');
+  }
+  renderSaleSelectedItems();
+};
+
+window.renderSaleSelectedItems = function() {
+  const container = document.getElementById('saleSelectedItems');
+  const rows = document.getElementById('saleQtyRows');
+  
+  if (saleSelectedItems.size === 0) {
+    container.style.display = 'none';
+    rows.innerHTML = '';
+    return;
+  }
+  
+  container.style.display = 'block';
+  
+  // Keep existing values if already rendered
+  const existingValues = {};
+  document.querySelectorAll('.sale-qty-input').forEach(input => {
+    existingValues[input.dataset.id] = input.value;
+  });
+
+  let html = '';
+  saleSelectedItems.forEach(id => {
+    const p = _items.find(i => i.id === id);
+    if (!p) return;
+    const val = existingValues[id] || '1';
+    html += `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; border:1px solid var(--border); border-radius:6px; margin-bottom:8px; background:var(--bg);">
+        <div style="font-size:13px; font-weight:600;">${esc(p.name)} <span style="color:var(--muted); font-size:11px;">(${esc(p.sku)})</span></div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:11px; color:var(--muted);">Max: ${p.qty}</span>
+          <input type="number" class="sale-qty-input" data-id="${p.id}" value="${val}" min="1" max="${p.qty}" style="width:80px; padding:6px; border:1px solid var(--border); border-radius:4px; font-family:inherit;">
+          <button class="btn btn-secondary btn-sm" onclick="toggleSaleProduct('${p.id}')" style="padding:4px 8px; color:var(--danger); border:none;">×</button>
+        </div>
+      </div>
+    `;
+  });
+  rows.innerHTML = html;
+};
+
+window.saveSale = async function() {
+  const buyer = document.getElementById('sale-buyer').value.trim();
+  if (!buyer) {
+    return showToast('Please enter a buyer name.', 'error');
+  }
+  if (saleSelectedItems.size === 0) {
+    return showToast('Please select at least one product.', 'error');
+  }
+
+  const items = [];
+  let valid = true;
+  document.querySelectorAll('.sale-qty-input').forEach(input => {
+    const id = input.dataset.id;
+    const qty = parseFloat(input.value);
+    const p = _items.find(i => i.id === id);
+    if (!qty || qty <= 0) {
+      showToast(`Invalid quantity for ${p.name}`, 'error');
+      valid = false;
+    }
+    if (qty > p.qty) {
+      showToast(`Not enough stock for ${p.name}. Only ${p.qty} available.`, 'error');
+      valid = false;
+    }
+    items.push({ item_id: id, qty });
+  });
+
+  if (!valid) return;
+
+  try {
+    const res = await fetch('/api/sales', {
+      method: 'POST',
+      headers: apiHeaders(),
+      body: JSON.stringify({ buyer, items })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to log sale');
+    
+    showToast(`Sale logged for ${buyer}!`, 'success');
+    closeSaleModal();
+    await fetchAllData();
+    renderProductStock();
+    renderOverview();
+  } catch(e) {
+    showToast(e.message, 'error');
+  }
+};
+
+// ================================================================
+// RESTOCK MODAL LOGIC (Trim & Fabric)
+// ================================================================
+let restockSelectedItems = new Set();
+
+window.openRestockModal = function() {
+  const modal = document.getElementById('restockModal');
+  const grid = document.getElementById('restockMaterialGrid');
+  
+  restockSelectedItems.clear();
+  
+  const materials = _items.filter(i => i.category === 'Trim' || i.category === 'Fabric');
+  if (materials.length === 0) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><p>No materials available to restock.</p></div>';
+  } else {
+    grid.innerHTML = materials.map(m => {
+      const imgHtml = m.image_url ? `<img src="${esc(m.image_url)}" alt="${esc(m.name)}" style="width:100%; height:100%; object-fit:cover;"/>` : `<div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%; background:var(--bg); font-size:24px;">🧵</div>`;
+      return `
+        <div class="product-card" id="restock-card-${m.id}" onclick="toggleRestockMaterial('${m.id}')">
+          <div style="aspect-ratio:1/1; position:relative;">
+            ${imgHtml}
+          </div>
+          <div class="product-card-check">
+            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+          </div>
+          <div class="product-card-body">
+            <div class="product-card-name">${esc(m.name)}</div>
+            <div class="product-card-qty" style="color:var(--muted)">${m.qty} in stock</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+  
+  renderRestockSelectedItems();
+  modal.classList.add('open');
+};
+
+window.closeRestockModal = function() {
+  document.getElementById('restockModal').classList.remove('open');
+};
+
+window.toggleRestockMaterial = function(id) {
+  const card = document.getElementById(`restock-card-${id}`);
+  if (restockSelectedItems.has(id)) {
+    restockSelectedItems.delete(id);
+    card.classList.remove('selected');
+  } else {
+    restockSelectedItems.add(id);
+    card.classList.add('selected');
+  }
+  renderRestockSelectedItems();
+};
+
+window.renderRestockSelectedItems = function() {
+  const container = document.getElementById('restockSelectedItems');
+  const rows = document.getElementById('restockQtyRows');
+  
+  if (restockSelectedItems.size === 0) {
+    container.style.display = 'none';
+    rows.innerHTML = '';
+    return;
+  }
+  
+  container.style.display = 'block';
+  
+  const existingValues = {};
+  document.querySelectorAll('.restock-qty-input').forEach(input => {
+    existingValues[input.dataset.id] = input.value;
+  });
+
+  let html = '';
+  restockSelectedItems.forEach(id => {
+    const m = _items.find(i => i.id === id);
+    if (!m) return;
+    const val = existingValues[id] || '';
+    const unit = m.category === 'Fabric' ? 'meters' : 'units';
+    html += `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; border:1px solid var(--border); border-radius:6px; margin-bottom:8px; background:var(--bg);">
+        <div style="font-size:13px; font-weight:600;">${esc(m.name)} <span style="color:var(--muted); font-size:11px;">(${m.category})</span></div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <input type="number" class="restock-qty-input" data-id="${m.id}" value="${val}" min="0.01" step="any" placeholder="+ Qty (${unit})" style="width:100px; padding:6px; border:1px solid var(--border); border-radius:4px; font-family:inherit;">
+          <button class="btn btn-secondary btn-sm" onclick="toggleRestockMaterial('${m.id}')" style="padding:4px 8px; color:var(--danger); border:none;">×</button>
+        </div>
+      </div>
+    `;
+  });
+  rows.innerHTML = html;
+};
+
+window.saveRestock = async function() {
+  if (restockSelectedItems.size === 0) {
+    return showToast('Please select at least one material.', 'error');
+  }
+
+  const inputs = Array.from(document.querySelectorAll('.restock-qty-input'));
+  
+  // Validate all inputs first
+  for (const input of inputs) {
+    const qty = parseFloat(input.value);
+    if (!qty || qty <= 0) {
+      const p = _items.find(i => i.id === input.dataset.id);
+      return showToast(`Invalid restock quantity for ${p.name}`, 'error');
+    }
+  }
+
+  try {
+    for (const input of inputs) {
+      const id = input.dataset.id;
+      const amount = parseFloat(input.value);
+      
+      const res = await fetch('/api/items/stock', {
+        method: 'POST',
+        headers: apiHeaders(),
+        body: JSON.stringify({ item_id: id, type: 'in', amount: amount, notes: 'Restock materials' })
+      });
+      if (!res.ok) throw new Error('Failed to log restock for some items');
+    }
+    
+    showToast(`Materials restocked successfully!`, 'success');
+    closeRestockModal();
+    await fetchAllData();
+    renderInventory();
+    renderOverview();
+  } catch(e) {
+    showToast(e.message, 'error');
+  }
+};

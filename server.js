@@ -226,7 +226,7 @@ app.post('/api/items/stock', authenticateToken, async (req, res) => {
         }
 
         const op = type === 'in' ? '+' : '-';
-        await db.run(`UPDATE items SET qty = MAX(0, qty ${op} ?) WHERE id = ?`, [amount, item_id]);
+        await db.run(`UPDATE items SET qty = GREATEST(0, qty ${op} ?) WHERE id = ?`, [amount, item_id]);
         
         const ts = new Date().toISOString();
         const user = req.user ? req.user.username : 'anonymous';
@@ -454,7 +454,7 @@ app.post('/api/batches', authenticateToken, async (req, res) => {
                     [mId, batch_id, m.material_id, m.type, m.consumed_qty, m.unit_cost || 0, m.total_cost || 0]);
 
                 // Subtract from items using id
-                await db.run('UPDATE items SET qty = MAX(0, qty - ?) WHERE id = ?', [m.consumed_qty, m.material_id]);
+                await db.run('UPDATE items SET qty = GREATEST(0, qty - ?) WHERE id = ?', [m.consumed_qty, m.material_id]);
 
                 // Log each material deduction
                 const matItem = await db.get('SELECT name FROM items WHERE id = ?', [m.material_id]);
@@ -489,35 +489,53 @@ app.post('/api/batches', authenticateToken, async (req, res) => {
     }
 });
 
+// --- SALES ---
+app.post('/api/sales', authenticateToken, async (req, res) => {
+    try {
+        const { buyer, items } = req.body;
+        if (!buyer || !items || !Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ error: 'Buyer name and at least one item are required' });
+        }
+        const ts = new Date().toISOString();
+        const user = req.user ? req.user.username : 'anonymous';
+        const results = [];
+        for (const sale of items) {
+            const { item_id, qty } = sale;
+            const item = await db.get('SELECT * FROM items WHERE id = ?', [item_id]);
+            if (!item) continue;
+            if (item.qty < qty) {
+                return res.status(400).json({ error: `Insufficient stock for ${item.name}. Available: ${item.qty}` });
+            }
+            await db.run('UPDATE items SET qty = GREATEST(0, qty - ?) WHERE id = ?', [qty, item_id]);
+            await db.run('INSERT INTO audit (ts, event, detail, "user") VALUES (?, ?, ?, ?)',
+                [ts, 'SALE', `Sold ${qty} x ${item.name} to ${buyer}`, user]);
+            results.push({ item_id, name: item.name, qty });
+        }
+        res.json({ success: true, buyer, items: results });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal error' });
+    }
+});
+
 app.post('/api/products/batch', authenticateToken, async (req, res) => {
-    // Simplified endpoint purely for adding stock to a product and assigning a batch number automatically
+    // Simplified endpoint purely for adding stock to a product (no batch record)
     try {
         const { product_id, produced_qty } = req.body;
-        
-        // GLOBAL batch number increment
-        const lastBatch = await db.get('SELECT MAX(batch_number) as max_bn FROM product_batches');
-        const batch_number = (lastBatch && lastBatch.max_bn ? lastBatch.max_bn : 0) + 1;
-        
-        const batch_id = 'b' + Date.now();
         const created_at = new Date().toISOString();
         
         // Look up item to ensure we have correct ID/SKU
         let productItem = await db.get('SELECT * FROM items WHERE id = ? OR sku = ? OR name = ?', [product_id, product_id, product_id]);
-        const actualProductId = productItem ? productItem.id : product_id;
+        if (!productItem) return res.status(404).json({ error: 'Product not found' });
 
-        // Insert a simplified batch with no duration or materials
-        await db.run('INSERT INTO product_batches VALUES (?, ?, ?, ?, ?, ?)', [batch_id, actualProductId, batch_number, produced_qty, 'N/A', created_at]);
+        // Increment the actual stock
+        await db.run('UPDATE items SET qty = qty + ? WHERE id = ?', [produced_qty, productItem.id]);
         
-        // Instantly increment the actual stock
-        if (productItem) {
-            await db.run('UPDATE items SET qty = qty + ? WHERE id = ?', [produced_qty, productItem.id]);
-        }
-        
-        // Log the event
+        // Log the event as a stock adjustment (not production)
         const user = req.user ? req.user.username : 'anonymous';
-        await db.run('INSERT INTO audit (ts, event, detail, "user") VALUES (?, ?, ?, ?)', [created_at, 'STOCK_ADJUST', `Added ${produced_qty} to ${productItem ? productItem.name : product_id} (Batch #${batch_number})`, user]);
+        await db.run('INSERT INTO audit (ts, event, detail, "user") VALUES (?, ?, ?, ?)', [created_at, 'STOCK_ADJUST', `Added ${produced_qty} units to ${productItem.name} (stock restock)`, user]);
 
-        res.json({ success: true, batch_number, batch_id });
+        res.json({ success: true });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Internal error' });
