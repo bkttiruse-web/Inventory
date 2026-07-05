@@ -1010,10 +1010,6 @@ tr.row-out:hover { background: #fee2e2; }
   margin-bottom: 6px;
 }
 
-[data-theme="dark"] .login-logo-img,
-[data-theme="dark"] .sidebar-brand img {
-  filter: brightness(0) invert(1);
-}
 
 /* =========================================================
    PRODUCTION SECTION — MOBILE SCROLLABLE ROWS

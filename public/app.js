@@ -1631,7 +1631,8 @@ window.renderReports = function() {
       } else {
           prodRepBody.innerHTML = monthlyBatches.map(b => {
               const prod = _items.find(i => i.id === b.product_id || i.sku === b.product_id || i.name === b.product_id) || { name: b.product_id };
-              const stageDetails = b.stages.map(s => `<div><strong>${esc(s.stage_name)}:</strong> ${esc(s.start_date)} to ${esc(s.end_date)} <em style="color:var(--muted)">(${esc(s.duration)})</em></div>`).join('');
+              const sortedStages = (b.stages || []).slice().sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+              const stageDetails = sortedStages.map(s => `<div><strong>${esc(s.stage_name)}:</strong> ${esc(s.start_date)} to ${esc(s.end_date)} <em style="color:var(--muted)">(${esc(s.duration)})</em></div>`).join('');
               return `<tr>
                   <td style="font-weight:bold;">#${b.batch_number}</td>
                   <td>${esc(prod.name)}</td>
@@ -2228,57 +2229,7 @@ window.validateStageDates = function(inputElement) {
       return;
     }
   }
-  
-  // Task #2: Validate against other stages to prevent overlaps
-  const allStageRows = Array.from(document.querySelectorAll('#prod-stages-container > div'));
-  
-  for (let i = 0; i < allStageRows.length; i++) {
-    const stageRow = allStageRows[i];
-    const stageStart = stageRow.querySelector('.stage-start').value;
-    const stageEnd = stageRow.querySelector('.stage-end').value;
-    const stageIndex = parseInt(stageRow.querySelector('.stage-start').dataset.index);
-    const stageName = stageRow.children[0].textContent;
-    
-    if (!stageStart || !stageEnd || stageIndex === currentIndex) continue;
-    
-    const thisStageStart = new Date(stageStart);
-    const thisStageEnd = new Date(stageEnd);
-    
-    // Check if current stage (that's being edited) has conflicts with this stage
-    if (stageIndex === currentIndex - 1) {
-      // Previous stage: its end date must be <= our start date
-      if (startDate) {
-        const ourStart = new Date(startDate);
-        if (thisStageEnd > ourStart) {
-          startInput.style.borderColor = 'var(--danger)';
-          startInput.style.borderWidth = '2px';
-          showToast(`${row.children[0].textContent} cannot start before ${stageName} ends!`, 'error');
-          startInput.value = '';
-          setTimeout(() => {
-            startInput.style.borderColor = '';
-            startInput.style.borderWidth = '';
-          }, 2000);
-          return;
-        }
-      }
-    } else if (stageIndex === currentIndex + 1) {
-      // Next stage: our end date must be <= its start date
-      if (endDate) {
-        const ourEnd = new Date(endDate);
-        if (ourEnd > thisStageStart) {
-          endInput.style.borderColor = 'var(--danger)';
-          endInput.style.borderWidth = '2px';
-          showToast(`${row.children[0].textContent} cannot end after ${stageName} starts!`, 'error');
-          endInput.value = '';
-          setTimeout(() => {
-            endInput.style.borderColor = '';
-            endInput.style.borderWidth = '';
-          }, 2000);
-          return;
-        }
-      }
-    }
-  }
+
   
   // Valid date range - clear any error styling
   startInput.style.borderColor = '';
@@ -2367,21 +2318,8 @@ window.saveProduction = async function() {
 
   if (stages.length === 0) return showToast('Please enter dates for at least one stage', 'error');
 
-  // Task #9: Check for overlapping stages
-  // Stages must be in sequence - each stage must end before or on the day the next begins
-  for (let i = 0; i < stages.length - 1; i++) {
-    const currentEnd = new Date(stages[i].end_date);
-    const nextStart = new Date(stages[i + 1].start_date);
-    
-    // Set both dates to midnight for proper day comparison
-    currentEnd.setHours(0, 0, 0, 0);
-    nextStart.setHours(0, 0, 0, 0);
-    
-    if (currentEnd > nextStart) {
-      showToast(`Stage dates overlap! ${stages[i].stage_name} ends (${stages[i].end_date}) after ${stages[i + 1].stage_name} starts (${stages[i + 1].start_date}).`, 'error');
-      return;
-    }
-  }
+  // Sort stages chronologically by start date
+  stages.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
 
   const totalDuration = document.getElementById('prod-summary-duration').textContent;
 
@@ -2447,7 +2385,8 @@ window.renderBatches = function() {
 
     let stageHtml = '';
     if (b.stages && b.stages.length > 0) {
-      stageHtml = b.stages.map(s => `
+      const sortedBatchStages = b.stages.slice().sort((a, c) => new Date(a.start_date) - new Date(c.start_date));
+      stageHtml = sortedBatchStages.map(s => `
         <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:var(--bg); border-radius:6px; margin-bottom:6px; font-size:13px;">
           <div style="font-weight:600;">${esc(s.stage_name)}</div>
           <div style="color:var(--muted); font-size:12px;">${new Date(s.start_date).toLocaleDateString()} — ${new Date(s.end_date).toLocaleDateString()}</div>
@@ -2558,6 +2497,15 @@ window.initTheme = function() {
   const savedTheme = localStorage.getItem('nia_theme') || 'light';
   document.documentElement.setAttribute('data-theme', savedTheme);
   
+  const updateLogos = (theme) => {
+    const isDark = theme === 'dark';
+    document.querySelectorAll('.login-logo-img, .sidebar-brand img').forEach(img => {
+      img.src = isDark ? "/Images/NIA%20dark.png" : "/Images/NIA%20clean.png";
+    });
+  };
+  
+  updateLogos(savedTheme);
+  
   const themeBtn = document.getElementById('themeToggleBtn');
   if (themeBtn && !themeBtn.dataset.listenerAdded) {
     themeBtn.dataset.listenerAdded = 'true';
@@ -2567,6 +2515,7 @@ window.initTheme = function() {
       const next = current === 'dark' ? 'light' : 'dark';
       document.documentElement.setAttribute('data-theme', next);
       localStorage.setItem('nia_theme', next);
+      updateLogos(next);
       
       // Re-render charts if on reports page
       const reportsPage = document.getElementById('page-reports');
