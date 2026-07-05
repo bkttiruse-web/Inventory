@@ -2615,11 +2615,11 @@ window.openSaleModal = function() {
     grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><p>No products available to sell.</p></div>';
   } else {
     grid.innerHTML = products.map(p => {
-      const imgHtml = p.image_url ? `<img src="${esc(p.image_url)}" alt="${esc(p.name)}" style="width:100%; height:100%; object-fit:cover;"/>` : `<div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%; background:var(--bg); font-size:24px;">📦</div>`;
+      const imgHtml = p.image_url ? `<img src="${esc(p.image_url)}" alt="${esc(p.name)}"/>` : `<div class="no-img">📦</div>`;
       const stockColor = p.qty <= 0 ? 'var(--danger)' : p.qty <= p.threshold ? 'var(--warning)' : 'var(--success)';
       return `
         <div class="product-card" id="sale-card-${p.id}" onclick="toggleSaleProduct('${p.id}')">
-          <div style="aspect-ratio:1/1; position:relative;">
+          <div class="product-card-img">
             ${imgHtml}
           </div>
           <div class="product-card-check">
@@ -2754,10 +2754,10 @@ window.openRestockModal = function() {
     grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><p>No materials available to restock.</p></div>';
   } else {
     grid.innerHTML = materials.map(m => {
-      const imgHtml = m.image_url ? `<img src="${esc(m.image_url)}" alt="${esc(m.name)}" style="width:100%; height:100%; object-fit:cover;"/>` : `<div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%; background:var(--bg); font-size:24px;">🧵</div>`;
+      const imgHtml = m.image_url ? `<img src="${esc(m.image_url)}" alt="${esc(m.name)}"/>` : `<div class="no-img">🧵</div>`;
       return `
         <div class="product-card" id="restock-card-${m.id}" onclick="toggleRestockMaterial('${m.id}')">
-          <div style="aspect-ratio:1/1; position:relative;">
+          <div class="product-card-img">
             ${imgHtml}
           </div>
           <div class="product-card-check">
