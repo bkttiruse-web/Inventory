@@ -1574,7 +1574,7 @@ window.renderReports = function() {
           productBody.innerHTML = '<tr><td colspan="4"><p class="empty-state">No batches found for this month</p></td></tr>';
       } else {
           productBody.innerHTML = monthlyBatches.map(b => {
-              const prod = _items.find(i => i.sku === b.product_id) || { name: b.product_id };
+              const prod = _items.find(i => i.id === b.product_id || i.sku === b.product_id || i.name === b.product_id) || { name: b.product_id };
               return `<tr>
                   <td>#${b.batch_number}</td>
                   <td>${esc(prod.name)}</td>
@@ -1630,7 +1630,7 @@ window.renderReports = function() {
           prodRepBody.innerHTML = '<tr><td colspan="5"><p class="empty-state">No production runs found for this month</p></td></tr>';
       } else {
           prodRepBody.innerHTML = monthlyBatches.map(b => {
-              const prod = _items.find(i => i.sku === b.product_id) || { name: b.product_id };
+              const prod = _items.find(i => i.id === b.product_id || i.sku === b.product_id || i.name === b.product_id) || { name: b.product_id };
               const stageDetails = b.stages.map(s => `<div><strong>${esc(s.stage_name)}:</strong> ${esc(s.start_date)} to ${esc(s.end_date)} <em style="color:var(--muted)">(${esc(s.duration)})</em></div>`).join('');
               return `<tr>
                   <td style="font-weight:bold;">#${b.batch_number}</td>
@@ -2030,9 +2030,6 @@ window.renderProductStock = function() {
     return `
       <div class="product-card" id="pcard-${p.id}" onclick="toggleProductCardSelect('${p.id}')">
         <div class="product-card-img">${imgHtml}</div>
-        <div class="product-card-check">
-          <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-        </div>
         <div class="product-card-body">
           <div class="product-card-name">${esc(p.name)}</div>
           <div class="product-card-sku">${esc(p.sku)}</div>
