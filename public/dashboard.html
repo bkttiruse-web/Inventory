@@ -52,7 +52,7 @@
 
       <div class="nav-section-label">Data</div>
 
-      <div class="nav-item" data-page="sales" onclick="navigateTo('sales')">
+      <div class="nav-item admin-only" data-page="sales" onclick="navigateTo('sales')">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         Sales
       </div>
@@ -134,14 +134,14 @@
           </div>
           <div style="display:flex; align-items:center; gap:16px;">
             <div style="text-align:right;"><span class="dash-accordion-stat" id="do-prod-total">—</span></div>
-            <div style="text-align:right;"><span class="dash-accordion-stat" id="do-prod-price-total" style="color:var(--success); font-size:16px;">—</span></div>
+            <div class="admin-only" style="text-align:right;"><span class="dash-accordion-stat" id="do-prod-price-total" style="color:var(--success); font-size:16px;">—</span></div>
             <svg class="dash-accordion-chevron" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
           </div>
         </div>
         <div class="dash-accordion-body">
           <div class="dash-accordion-content table-wrap">
             <table style="margin:0;">
-              <thead><tr><th>Image</th><th>Product Name</th><th>Quantity</th><th>Unit Price</th><th>Total Price</th></tr></thead>
+              <thead><tr><th>Image</th><th>Product Name</th><th>Quantity</th><th class="admin-only">Unit Price</th><th class="admin-only">Total Price</th></tr></thead>
               <tbody id="do-prod-tbody"></tbody>
             </table>
           </div>
@@ -157,14 +157,14 @@
           </div>
           <div style="display:flex; align-items:center; gap:16px;">
             <div style="text-align:right;"><span class="dash-accordion-stat" id="do-trim-total">—</span></div>
-            <div style="text-align:right;"><span class="dash-accordion-stat" id="do-trim-price-total" style="color:var(--success); font-size:16px;">—</span></div>
+            <div class="admin-only" style="text-align:right;"><span class="dash-accordion-stat" id="do-trim-price-total" style="color:var(--success); font-size:16px;">—</span></div>
             <svg class="dash-accordion-chevron" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
           </div>
         </div>
         <div class="dash-accordion-body">
           <div class="dash-accordion-content table-wrap">
             <table style="margin:0;">
-              <thead><tr><th>Image</th><th>Trim Name</th><th>Quantity</th><th>Unit Price</th><th>Total Price</th></tr></thead>
+              <thead><tr><th>Image</th><th>Trim Name</th><th>Quantity</th><th class="admin-only">Unit Price</th><th class="admin-only">Total Price</th></tr></thead>
               <tbody id="do-trim-tbody"></tbody>
             </table>
           </div>
@@ -180,14 +180,14 @@
           </div>
           <div style="display:flex; align-items:center; gap:16px;">
             <div style="text-align:right;"><span class="dash-accordion-stat" id="do-fab-total">—</span></div>
-            <div style="text-align:right;"><span class="dash-accordion-stat" id="do-fab-price-total" style="color:var(--success); font-size:16px;">—</span></div>
+            <div class="admin-only" style="text-align:right;"><span class="dash-accordion-stat" id="do-fab-price-total" style="color:var(--success); font-size:16px;">—</span></div>
             <svg class="dash-accordion-chevron" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
           </div>
         </div>
         <div class="dash-accordion-body">
           <div class="dash-accordion-content table-wrap">
             <table style="margin:0;">
-              <thead><tr><th>Image</th><th>Fabric Name</th><th>Quantity</th><th>Unit Price</th><th>Total Price</th></tr></thead>
+              <thead><tr><th>Image</th><th>Fabric Name</th><th>Quantity</th><th class="admin-only">Unit Price</th><th class="admin-only">Total Price</th></tr></thead>
               <tbody id="do-fab-tbody"></tbody>
             </table>
           </div>
@@ -220,7 +220,7 @@
               <div style="font-size:14px; color:var(--muted); font-weight:600; margin-bottom:8px;">Fabrics Consumed</div>
               <div style="font-size:32px; font-weight:700; color:var(--text);" id="do-month-fab">—</div>
             </div>
-            <div style="flex:1; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:20px; text-align:center; min-width:150px;">
+            <div class="admin-only" style="flex:1; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:20px; text-align:center; min-width:150px;">
               <div style="font-size:14px; color:var(--muted); font-weight:600; margin-bottom:8px;">Total Cost</div>
               <div style="font-size:32px; font-weight:700; color:var(--danger);" id="do-month-cost">—</div>
             </div>
@@ -343,7 +343,7 @@
                   <div class="stat-title">Fabrics Consumed</div>
                   <div class="stat-value" id="rm-fab-qty">—</div>
                 </div>
-                <div class="stat-card" style="padding:16px;">
+                <div class="stat-card admin-only" style="padding:16px;">
                   <div class="stat-title">Total Cost</div>
                   <div class="stat-value" id="rm-total-cost" style="color:var(--danger);">—</div>
                 </div>

@@ -689,7 +689,7 @@ function navigateTo(pageId) {
     if (overlay) overlay.classList.remove('open');
   }
   // Role guard for admin-only pages
-  if ((pageId === 'users' || pageId === 'seclog') && getSession()?.role !== 'admin') {
+  if ((pageId === 'users' || pageId === 'seclog' || pageId === 'sales' || pageId === 'inventory') && getSession()?.role !== 'admin') {
     auditLog('AUTH_FAIL', `Unauthorized access attempt to page: ${pageId}`);
     showToast('Access denied. Admins only.', 'error');
     pageId = 'overview';
@@ -781,6 +781,8 @@ function renderOverview() {
   const getImg = (i) => i.image_url ? `<img src="${esc(i.image_url)}" style="width:40px;height:40px;object-fit:cover;border-radius:4px;">` : `<div style="width:40px;height:40px;background:var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px;">📦</div>`;
   const getPrice = (i) => parseFloat(i.unit_cost) || 0;
   
+  const isAdmin = getSession()?.role === 'admin';
+  
   // 1. Products
   const products = items.filter(i => i.category === 'Products');
   const prodTotal = products.reduce((sum, i) => sum + i.qty, 0);
@@ -792,7 +794,7 @@ function renderOverview() {
   const prodBody = document.getElementById('do-prod-tbody');
   if (prodBody) {
       if (products.length === 0) {
-          prodBody.innerHTML = '<tr><td colspan="5"><p class="empty-state">No products found</p></td></tr>';
+          prodBody.innerHTML = `<tr><td colspan="${isAdmin ? 5 : 3}"><p class="empty-state">No products found</p></td></tr>`;
       } else {
           prodBody.innerHTML = products.map(p => {
               const uPrice = getPrice(p);
@@ -800,8 +802,7 @@ function renderOverview() {
                   <td>${getImg(p)}</td>
                   <td>${esc(p.name)}<br><span style="font-size:11px;color:var(--muted)">(${esc(p.sku)})</span></td>
                   <td style="font-weight:600;">${p.qty}</td>
-                  <td>$${uPrice.toFixed(2)}</td>
-                  <td style="font-weight:600; color:var(--success);">$${(p.qty * uPrice).toFixed(2)}</td>
+                  ${isAdmin ? `<td>$${uPrice.toFixed(2)}</td><td style="font-weight:600; color:var(--success);">$${(p.qty * uPrice).toFixed(2)}</td>` : ''}
               </tr>`;
           }).join('');
       }
@@ -818,7 +819,7 @@ function renderOverview() {
   const trimBody = document.getElementById('do-trim-tbody');
   if (trimBody) {
       if (trims.length === 0) {
-          trimBody.innerHTML = '<tr><td colspan="5"><p class="empty-state">No trims found</p></td></tr>';
+          trimBody.innerHTML = `<tr><td colspan="${isAdmin ? 5 : 3}"><p class="empty-state">No trims found</p></td></tr>`;
       } else {
           trimBody.innerHTML = trims.map(t => {
               const uPrice = getPrice(t);
@@ -826,8 +827,7 @@ function renderOverview() {
                   <td>${getImg(t)}</td>
                   <td>${esc(t.name)}<br><span style="font-size:11px;color:var(--muted)">(${esc(t.sku)})</span></td>
                   <td style="font-weight:600;">${t.qty}</td>
-                  <td>$${uPrice.toFixed(2)}</td>
-                  <td style="font-weight:600; color:var(--success);">$${(t.qty * uPrice).toFixed(2)}</td>
+                  ${isAdmin ? `<td>$${uPrice.toFixed(2)}</td><td style="font-weight:600; color:var(--success);">$${(t.qty * uPrice).toFixed(2)}</td>` : ''}
               </tr>`;
           }).join('');
       }
@@ -844,7 +844,7 @@ function renderOverview() {
   const fabBody = document.getElementById('do-fab-tbody');
   if (fabBody) {
       if (fabrics.length === 0) {
-          fabBody.innerHTML = '<tr><td colspan="5"><p class="empty-state">No fabrics found</p></td></tr>';
+          fabBody.innerHTML = `<tr><td colspan="${isAdmin ? 5 : 3}"><p class="empty-state">No fabrics found</p></td></tr>`;
       } else {
           fabBody.innerHTML = fabrics.map(f => {
               const uPrice = getPrice(f);
@@ -852,8 +852,7 @@ function renderOverview() {
                   <td>${getImg(f)}</td>
                   <td>${esc(f.name)}<br><span style="font-size:11px;color:var(--muted)">(${esc(f.sku)})</span></td>
                   <td style="font-weight:600;">${f.qty} ${esc(f.unit)}</td>
-                  <td>$${uPrice.toFixed(2)}</td>
-                  <td style="font-weight:600; color:var(--success);">$${(f.qty * uPrice).toFixed(2)}</td>
+                  ${isAdmin ? `<td>$${uPrice.toFixed(2)}</td><td style="font-weight:600; color:var(--success);">$${(f.qty * uPrice).toFixed(2)}</td>` : ''}
               </tr>`;
           }).join('');
       }
@@ -899,12 +898,14 @@ function renderOverview() {
   });
   
   const mProdQty = monthlyBatches.reduce((sum, b) => sum + (b.produced_qty || 0), 0);
-  let mTrimQty = 0; let mFabQty = 0;
+  let mTrimQty = 0; let mFabQty = 0; let mTotalCost = 0;
   monthlyBatches.forEach(b => {
       if (Array.isArray(b.materials)) {
           b.materials.forEach(m => {
-              if (m.type === 'trim') mTrimQty += (m.consumed_qty || 0);
-              if (m.type === 'fabric') mFabQty += (m.consumed_qty || 0);
+              const mItem = _items.find(i => i.id === m.material_id);
+              const uCost = mItem ? (parseFloat(mItem.unit_cost) || 0) : 0;
+              if (m.material_type === 'trim') { mTrimQty += (m.consumed_qty || 0); mTotalCost += ((m.consumed_qty || 0) * uCost); }
+              if (m.material_type === 'fabric') { mFabQty += (m.consumed_qty || 0); mTotalCost += ((m.consumed_qty || 0) * uCost); }
           });
       }
   });
@@ -915,6 +916,8 @@ function renderOverview() {
   if (doMonTrim) doMonTrim.textContent = mTrimQty;
   const doMonFab = document.getElementById('do-month-fab');
   if (doMonFab) doMonFab.textContent = mFabQty.toFixed(2) + 'm';
+  const doMonCost = document.getElementById('do-month-cost');
+  if (doMonCost) doMonCost.textContent = '$' + mTotalCost.toFixed(2);
 
   // Global Alert Badges
   const banner = document.getElementById('alertBanner');
@@ -1605,10 +1608,10 @@ window.renderReports = function() {
   let mTotalCost = 0;
   monthlyBatches.forEach(b => {
       b.materials.forEach(m => {
-          const mItem = _items.find(i => i.id === m.item_id);
+          const mItem = _items.find(i => i.id === m.material_id);
           const uCost = mItem ? (parseFloat(mItem.unit_cost) || 0) : 0;
-          if (m.type === 'trim') { mTrimQty += m.consumed_qty; mTotalCost += (m.consumed_qty * uCost); }
-          if (m.type === 'fabric') { mFabQty += m.consumed_qty; mTotalCost += (m.consumed_qty * uCost); }
+          if (m.material_type === 'trim') { mTrimQty += m.consumed_qty; mTotalCost += (m.consumed_qty * uCost); }
+          if (m.material_type === 'fabric') { mFabQty += m.consumed_qty; mTotalCost += (m.consumed_qty * uCost); }
       });
   });
 
