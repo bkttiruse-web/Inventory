@@ -66,6 +66,18 @@ async function initDb() {
             "user" TEXT
         )`);
 
+    // Sales Table
+    await client.query(`CREATE TABLE IF NOT EXISTS sales (
+            id TEXT PRIMARY KEY,
+            ts TEXT,
+            buyer TEXT,
+            item_id TEXT,
+            qty INTEGER,
+            unit_price REAL,
+            total_price REAL,
+            "user" TEXT
+        )`);
+
     // Trim Table
     await client.query(`CREATE TABLE IF NOT EXISTS trim (
             id TEXT PRIMARY KEY,

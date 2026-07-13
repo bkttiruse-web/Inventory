@@ -17,15 +17,9 @@
   <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleMobileMenu()"></div>
 
   <aside class="sidebar">
-    <div class="sidebar-brand" style="display:flex; justify-content:space-between; align-items:center;">
-      <div style="display:flex; align-items:center; gap:12px;">
-        <img src="/Images/NIA%20clean.png" alt="NIA Logo" style="width:40px; height:40px; object-fit:contain;" />
-        <div>
-          <div class="brand-name">NIA<span>.</span></div>
-          <div class="brand-sub">Inventory System</div>
-        </div>
-      </div>
-      <button class="mobile-menu-btn" onclick="toggleMobileMenu()" aria-label="Close Menu">
+    <div class="sidebar-brand" style="display:flex; justify-content:center; align-items:center; padding:16px; position:relative;">
+      <img src="/Images/NIA%20Light%20mode.png" alt="NIA Logo" style="width:100%; max-width:140px; height:auto; object-fit:contain;" />
+      <button class="mobile-menu-btn" onclick="toggleMobileMenu()" aria-label="Close Menu" style="position:absolute; right:16px;">
         <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
     </div>
@@ -50,13 +44,18 @@
         Production
       </div>
 
-      <div class="nav-item" data-page="inventory" onclick="navigateTo('inventory')">
+      <div class="nav-item admin-only" data-page="inventory" onclick="navigateTo('inventory')">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
         Materials
         <span class="nav-badge" id="alertBadge" style="display:none">0</span>
       </div>
 
       <div class="nav-section-label">Data</div>
+
+      <div class="nav-item" data-page="sales" onclick="navigateTo('sales')">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Sales
+      </div>
 
       <div class="nav-item" data-page="reports" onclick="navigateTo('reports')">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
@@ -134,14 +133,15 @@
             Product Overview
           </div>
           <div style="display:flex; align-items:center; gap:16px;">
-            <span class="dash-accordion-stat" id="do-prod-total">—</span>
+            <div style="text-align:right;"><span class="dash-accordion-stat" id="do-prod-total">—</span></div>
+            <div style="text-align:right;"><span class="dash-accordion-stat" id="do-prod-price-total" style="color:var(--success); font-size:16px;">—</span></div>
             <svg class="dash-accordion-chevron" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
           </div>
         </div>
         <div class="dash-accordion-body">
           <div class="dash-accordion-content table-wrap">
             <table style="margin:0;">
-              <thead><tr><th>Product Name</th><th>Batch Number</th><th>Quantity</th></tr></thead>
+              <thead><tr><th>Image</th><th>Product Name</th><th>Quantity</th><th>Unit Price</th><th>Total Price</th></tr></thead>
               <tbody id="do-prod-tbody"></tbody>
             </table>
           </div>
@@ -156,14 +156,15 @@
             Trim Overview
           </div>
           <div style="display:flex; align-items:center; gap:16px;">
-            <span class="dash-accordion-stat" id="do-trim-total">—</span>
+            <div style="text-align:right;"><span class="dash-accordion-stat" id="do-trim-total">—</span></div>
+            <div style="text-align:right;"><span class="dash-accordion-stat" id="do-trim-price-total" style="color:var(--success); font-size:16px;">—</span></div>
             <svg class="dash-accordion-chevron" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
           </div>
         </div>
         <div class="dash-accordion-body">
           <div class="dash-accordion-content table-wrap">
             <table style="margin:0;">
-              <thead><tr><th>Name</th><th>Quantity</th></tr></thead>
+              <thead><tr><th>Image</th><th>Trim Name</th><th>Quantity</th><th>Unit Price</th><th>Total Price</th></tr></thead>
               <tbody id="do-trim-tbody"></tbody>
             </table>
           </div>
@@ -178,14 +179,15 @@
             Fabric Overview
           </div>
           <div style="display:flex; align-items:center; gap:16px;">
-            <span class="dash-accordion-stat" id="do-fab-total">—</span>
+            <div style="text-align:right;"><span class="dash-accordion-stat" id="do-fab-total">—</span></div>
+            <div style="text-align:right;"><span class="dash-accordion-stat" id="do-fab-price-total" style="color:var(--success); font-size:16px;">—</span></div>
             <svg class="dash-accordion-chevron" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
           </div>
         </div>
         <div class="dash-accordion-body">
           <div class="dash-accordion-content table-wrap">
             <table style="margin:0;">
-              <thead><tr><th>Name</th><th>Quantity</th></tr></thead>
+              <thead><tr><th>Image</th><th>Fabric Name</th><th>Quantity</th><th>Unit Price</th><th>Total Price</th></tr></thead>
               <tbody id="do-fab-tbody"></tbody>
             </table>
           </div>
@@ -205,18 +207,22 @@
           </div>
         </div>
         <div class="dash-accordion-body">
-          <div class="dash-accordion-content" style="display:flex; gap:24px; padding:24px;">
-            <div style="flex:1; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:20px; text-align:center;">
+          <div class="dash-accordion-content" style="display:flex; gap:24px; padding:24px; flex-wrap:wrap;">
+            <div style="flex:1; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:20px; text-align:center; min-width:150px;">
               <div style="font-size:14px; color:var(--muted); font-weight:600; margin-bottom:8px;">Products Produced</div>
               <div style="font-size:32px; font-weight:700; color:var(--primary);" id="do-month-prod">—</div>
             </div>
-            <div style="flex:1; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:20px; text-align:center;">
+            <div style="flex:1; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:20px; text-align:center; min-width:150px;">
               <div style="font-size:14px; color:var(--muted); font-weight:600; margin-bottom:8px;">Trims Consumed</div>
               <div style="font-size:32px; font-weight:700; color:var(--text);" id="do-month-trim">—</div>
             </div>
-            <div style="flex:1; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:20px; text-align:center;">
+            <div style="flex:1; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:20px; text-align:center; min-width:150px;">
               <div style="font-size:14px; color:var(--muted); font-weight:600; margin-bottom:8px;">Fabrics Consumed</div>
               <div style="font-size:32px; font-weight:700; color:var(--text);" id="do-month-fab">—</div>
+            </div>
+            <div style="flex:1; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:20px; text-align:center; min-width:150px;">
+              <div style="font-size:14px; color:var(--muted); font-weight:600; margin-bottom:8px;">Total Cost</div>
+              <div style="font-size:32px; font-weight:700; color:var(--danger);" id="do-month-cost">—</div>
             </div>
           </div>
         </div>
@@ -265,7 +271,7 @@
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:12px;">
         <h2 style="margin-bottom:0; color:var(--text);">Products in Stock</h2>
         <div style="display:flex; gap:12px;">
-          <button class="btn btn-primary" onclick="openSaleModal()">
+          <button class="btn btn-primary admin-only" onclick="openSaleModal()">
             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
             Log Sale
           </button>
@@ -285,6 +291,21 @@
       <div id="batchAccordionContainer"></div>
     </div>
 
+    <!-- ===== SALES PAGE ===== -->
+    <div class="page" id="page-sales" style="padding-top:16px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+        <h2 style="margin-bottom:0; color:var(--text);">Sales History</h2>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Date</th><th>Buyer Name</th><th>Product</th><th>Quantity</th><th>Unit Price</th><th>Total Price</th></tr></thead>
+            <tbody id="salesTbody"><tr><td colspan="6"><div class="empty-state"><p>Loading...</p></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
 
     <!-- ===== REPORTS PAGE ===== -->
     <div class="page" id="page-reports">
@@ -300,8 +321,6 @@
           
           <div class="reports-tabs" style="display:flex; gap:16px; border-bottom:1px solid var(--border); width:100%; background:var(--dark); padding:10px 20px; border-radius:12px 12px 0 0;">
             <button class="tab-btn active" style="background:none; border:none; padding-bottom:8px; border-bottom:2px solid var(--primary); font-weight:600; cursor:pointer; color:white;" onclick="switchReportTab('monthly', this)">Monthly Report</button>
-            <button class="tab-btn" style="background:none; border:none; padding-bottom:8px; border-bottom:2px solid transparent; font-weight:600; cursor:pointer; color:white;" onclick="switchReportTab('trim', this)">Trim Report</button>
-            <button class="tab-btn" style="background:none; border:none; padding-bottom:8px; border-bottom:2px solid transparent; font-weight:600; cursor:pointer; color:white;" onclick="switchReportTab('fabric', this)">Fabric Report</button>
             <button class="tab-btn" style="background:none; border:none; padding-bottom:8px; border-bottom:2px solid transparent; font-weight:600; cursor:pointer; color:white;" onclick="switchReportTab('production', this)">Production Report</button>
           </div>
         </div>
@@ -323,6 +342,10 @@
                 <div class="stat-card" style="padding:16px;">
                   <div class="stat-title">Fabrics Consumed</div>
                   <div class="stat-value" id="rm-fab-qty">—</div>
+                </div>
+                <div class="stat-card" style="padding:16px;">
+                  <div class="stat-title">Total Cost</div>
+                  <div class="stat-value" id="rm-total-cost" style="color:var(--danger);">—</div>
                 </div>
               </div>
             </div>
@@ -346,25 +369,7 @@
             </div>
           </div>
 
-          <!-- Trim Report Content -->
-          <div id="rep-trim" class="report-tab-content" style="display:none;">
-            <div class="table-wrap">
-              <table>
-                <thead><tr><th>Trim Name</th><th>Current Quantity</th><th>Threshold</th><th>Stock Alert</th></tr></thead>
-                <tbody id="rep-trim-tbody"></tbody>
-              </table>
-            </div>
-          </div>
 
-          <!-- Fabric Report Content -->
-          <div id="rep-fabric" class="report-tab-content" style="display:none;">
-            <div class="table-wrap">
-              <table>
-                <thead><tr><th>Fabric Name</th><th>Current Quantity</th><th>Threshold</th><th>Stock Alert</th></tr></thead>
-                <tbody id="rep-fabric-tbody"></tbody>
-              </table>
-            </div>
-          </div>
 
           <!-- Production Report Content -->
           <div id="rep-production" class="report-tab-content" style="display:none;">

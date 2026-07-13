@@ -149,7 +149,7 @@ app.get('/api/items', authenticateToken, async (req, res) => {
         if (isAdmin) {
             items = await db.all('SELECT * FROM items');
         } else {
-            items = await db.all('SELECT id, name, sku, category, qty, unit, threshold, notes FROM items');
+            items = await db.all('SELECT id, name, sku, category, qty, unit, threshold, notes, image_url FROM items');
         }
         res.json(items);
     } catch (err) {
@@ -490,6 +490,15 @@ app.post('/api/batches', authenticateToken, async (req, res) => {
 });
 
 // --- SALES ---
+app.get('/api/sales', authenticateToken, async (req, res) => {
+    try {
+        const sales = await db.all('SELECT * FROM sales ORDER BY ts DESC');
+        res.json(sales);
+    } catch (err) {
+        res.status(500).json({ error: 'Internal error' });
+    }
+});
+
 app.post('/api/sales', authenticateToken, async (req, res) => {
     try {
         const { buyer, items } = req.body;
@@ -499,17 +508,32 @@ app.post('/api/sales', authenticateToken, async (req, res) => {
         const ts = new Date().toISOString();
         const user = req.user ? req.user.username : 'anonymous';
         const results = [];
+        
         for (const sale of items) {
-            const { item_id, qty } = sale;
+            const { item_id, qty, price } = sale;
             const item = await db.get('SELECT * FROM items WHERE id = ?', [item_id]);
             if (!item) continue;
             if (item.qty < qty) {
                 return res.status(400).json({ error: `Insufficient stock for ${item.name}. Available: ${item.qty}` });
             }
+            
+            // Calculate final price
+            const unitPrice = parseFloat(price) || item.unit_cost || 0;
+            const totalPrice = unitPrice * qty;
+            const saleId = 's' + Math.random().toString(36).substr(2, 9);
+            
+            // Deduct inventory
             await db.run('UPDATE items SET qty = GREATEST(0, qty - ?) WHERE id = ?', [qty, item_id]);
+            
+            // Insert into sales table
+            await db.run('INSERT INTO sales (id, ts, buyer, item_id, qty, unit_price, total_price, "user") VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                [saleId, ts, buyer, item_id, qty, unitPrice, totalPrice, user]);
+            
+            // Insert audit log
             await db.run('INSERT INTO audit (ts, event, detail, "user") VALUES (?, ?, ?, ?)',
-                [ts, 'SALE', `Sold ${qty} x ${item.name} to ${buyer}`, user]);
-            results.push({ item_id, name: item.name, qty });
+                [ts, 'SALE', `Sold ${qty} x ${item.name} to ${buyer} @ ${unitPrice.toFixed(2)}`, user]);
+                
+            results.push({ item_id, name: item.name, qty, unitPrice, totalPrice });
         }
         res.json({ success: true, buyer, items: results });
     } catch (err) {

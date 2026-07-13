@@ -20,6 +20,7 @@ let _trims = [];
 let _fabrics = [];
 let _batches = [];
 let _stockMovements = [];
+let _sales = [];
 
 function apiHeaders() {
     const s = getSession();
@@ -31,18 +32,20 @@ function apiHeaders() {
 
 async function fetchAllData() {
     try {
-        const [resItems, resTrims, resFabrics, resBatches, resMove] = await Promise.all([
+        const [resItems, resTrims, resFabrics, resBatches, resMove, resSales] = await Promise.all([
             fetch('/api/items', { headers: apiHeaders() }),
             fetch('/api/trims', { headers: apiHeaders() }),
             fetch('/api/fabrics', { headers: apiHeaders() }),
             fetch('/api/batches', { headers: apiHeaders() }),
-            fetch('/api/stock-movements', { headers: apiHeaders() })
+            fetch('/api/stock-movements', { headers: apiHeaders() }),
+            fetch('/api/sales', { headers: apiHeaders() })
         ]);
         if(resItems.ok) _items = await resItems.json();
         if(resTrims.ok) _trims = await resTrims.json();
         if(resFabrics.ok) _fabrics = await resFabrics.json();
         if(resBatches.ok) _batches = await resBatches.json();
         if(resMove.ok) _stockMovements = await resMove.json();
+        if(resSales.ok) _sales = await resSales.json();
         
         if (getSession() && getSession().role === 'admin') {
             const [resUsers, resLogs] = await Promise.all([
@@ -710,6 +713,7 @@ function navigateTo(pageId) {
   if (pageId === 'products')  renderProductStock();
   if (pageId === 'production')renderBatches();
   if (pageId === 'movements') renderMovements();
+  if (pageId === 'sales')     renderSales();
 }
 
 function getMaterialsByCategory(category) {
@@ -774,55 +778,84 @@ window.toggleDashboardAccordion = function(id) {
 function renderOverview() {
   const items = getItems();
   
+  const getImg = (i) => i.image_url ? `<img src="${esc(i.image_url)}" style="width:40px;height:40px;object-fit:cover;border-radius:4px;">` : `<div style="width:40px;height:40px;background:var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px;">📦</div>`;
+  const getPrice = (i) => parseFloat(i.unit_cost) || 0;
+  
   // 1. Products
   const products = items.filter(i => i.category === 'Products');
   const prodTotal = products.reduce((sum, i) => sum + i.qty, 0);
+  const prodPriceTotal = products.reduce((sum, i) => sum + (i.qty * getPrice(i)), 0);
   document.getElementById('do-prod-total').textContent = prodTotal;
+  const prodPriceTotalEl = document.getElementById('do-prod-price-total');
+  if(prodPriceTotalEl) prodPriceTotalEl.textContent = '$' + prodPriceTotal.toFixed(2);
   
   const prodBody = document.getElementById('do-prod-tbody');
   if (prodBody) {
       if (products.length === 0) {
-          prodBody.innerHTML = '<tr><td colspan="3"><p class="empty-state">No products found</p></td></tr>';
+          prodBody.innerHTML = '<tr><td colspan="5"><p class="empty-state">No products found</p></td></tr>';
       } else {
-          prodBody.innerHTML = products.map(p => `<tr>
-              <td>${esc(p.name)}</td>
-              <td>${esc(p.sku)}</td>
-              <td style="font-weight:600;">${p.qty}</td>
-          </tr>`).join('');
+          prodBody.innerHTML = products.map(p => {
+              const uPrice = getPrice(p);
+              return `<tr>
+                  <td>${getImg(p)}</td>
+                  <td>${esc(p.name)}<br><span style="font-size:11px;color:var(--muted)">(${esc(p.sku)})</span></td>
+                  <td style="font-weight:600;">${p.qty}</td>
+                  <td>$${uPrice.toFixed(2)}</td>
+                  <td style="font-weight:600; color:var(--success);">$${(p.qty * uPrice).toFixed(2)}</td>
+              </tr>`;
+          }).join('');
       }
   }
 
   // 2. Trims
   const trims = items.filter(i => i.category === 'Trim');
   const trimTotal = trims.reduce((sum, i) => sum + i.qty, 0);
+  const trimPriceTotal = trims.reduce((sum, i) => sum + (i.qty * getPrice(i)), 0);
   document.getElementById('do-trim-total').textContent = trimTotal;
+  const trimPriceTotalEl = document.getElementById('do-trim-price-total');
+  if(trimPriceTotalEl) trimPriceTotalEl.textContent = '$' + trimPriceTotal.toFixed(2);
   
   const trimBody = document.getElementById('do-trim-tbody');
   if (trimBody) {
       if (trims.length === 0) {
-          trimBody.innerHTML = '<tr><td colspan="2"><p class="empty-state">No trims found</p></td></tr>';
+          trimBody.innerHTML = '<tr><td colspan="5"><p class="empty-state">No trims found</p></td></tr>';
       } else {
-          trimBody.innerHTML = trims.map(t => `<tr>
-              <td>${esc(t.name)}</td>
-              <td style="font-weight:600;">${t.qty}</td>
-          </tr>`).join('');
+          trimBody.innerHTML = trims.map(t => {
+              const uPrice = getPrice(t);
+              return `<tr>
+                  <td>${getImg(t)}</td>
+                  <td>${esc(t.name)}<br><span style="font-size:11px;color:var(--muted)">(${esc(t.sku)})</span></td>
+                  <td style="font-weight:600;">${t.qty}</td>
+                  <td>$${uPrice.toFixed(2)}</td>
+                  <td style="font-weight:600; color:var(--success);">$${(t.qty * uPrice).toFixed(2)}</td>
+              </tr>`;
+          }).join('');
       }
   }
 
   // 3. Fabrics
   const fabrics = items.filter(i => i.category === 'Fabric' || i.category === 'Raw Materials' && i.unit === 'meters');
   const fabTotal = fabrics.reduce((sum, i) => sum + i.qty, 0);
+  const fabPriceTotal = fabrics.reduce((sum, i) => sum + (i.qty * getPrice(i)), 0);
   document.getElementById('do-fab-total').textContent = fabTotal.toFixed(2) + 'm';
+  const fabPriceTotalEl = document.getElementById('do-fab-price-total');
+  if(fabPriceTotalEl) fabPriceTotalEl.textContent = '$' + fabPriceTotal.toFixed(2);
   
   const fabBody = document.getElementById('do-fab-tbody');
   if (fabBody) {
       if (fabrics.length === 0) {
-          fabBody.innerHTML = '<tr><td colspan="2"><p class="empty-state">No fabrics found</p></td></tr>';
+          fabBody.innerHTML = '<tr><td colspan="5"><p class="empty-state">No fabrics found</p></td></tr>';
       } else {
-          fabBody.innerHTML = fabrics.map(f => `<tr>
-              <td>${esc(f.name)}</td>
-              <td style="font-weight:600;">${f.qty} ${esc(f.unit)}</td>
-          </tr>`).join('');
+          fabBody.innerHTML = fabrics.map(f => {
+              const uPrice = getPrice(f);
+              return `<tr>
+                  <td>${getImg(f)}</td>
+                  <td>${esc(f.name)}<br><span style="font-size:11px;color:var(--muted)">(${esc(f.sku)})</span></td>
+                  <td style="font-weight:600;">${f.qty} ${esc(f.unit)}</td>
+                  <td>$${uPrice.toFixed(2)}</td>
+                  <td style="font-weight:600; color:var(--success);">$${(f.qty * uPrice).toFixed(2)}</td>
+              </tr>`;
+          }).join('');
       }
   }
 
@@ -963,7 +996,13 @@ function renderInventoryTable(items) {
       <td><div class="item-name">${esc(item.name)}</div><div class="item-sku">${esc(item.sku)}</div></td>
       <td><span class="badge badge-${catBadge(item.category)}">${esc(item.category)}</span></td>
       ${isAdmin ? `<td>${item.unit_cost ? item.unit_cost.toLocaleString() + ' ETB' : '0.00 ETB'}</td>` : ''}
-      <td style="font-weight:600;">${item.qty} ${esc(item.unit || 'pcs')}</td>
+      <td>
+        <div style="display:flex; align-items:center; gap:8px; font-weight:600;">
+          <button class="btn btn-secondary btn-sm" onclick="quickAdjustStock('${item.id}', -1)" style="padding:2px 8px; border-radius:4px; font-size:14px; font-weight:bold;">-</button>
+          <span>${item.qty} ${esc(item.unit || 'pcs')}</span>
+          <button class="btn btn-secondary btn-sm" onclick="quickAdjustStock('${item.id}', 1)" style="padding:2px 8px; border-radius:4px; font-size:14px; font-weight:bold;">+</button>
+        </div>
+      </td>
       <td>${imageHtml}</td>
       <td>
         <div class="actions">
@@ -1410,6 +1449,36 @@ async function updateItem(id, data) {
   }
 }
 
+window.quickAdjustStock = async function(id, change) {
+  const items = getItems();
+  const item = items.find(i => i.id === id);
+  if(!item) return;
+  const newQty = item.qty + change;
+  if(newQty < 0) {
+    showToast('Stock cannot go below 0', 'error');
+    return;
+  }
+  try {
+    const updated = { ...item, qty: newQty };
+    await fetch('/api/items/' + item.id, { method: 'PUT', headers: apiHeaders(), body: JSON.stringify(updated) });
+    await fetchAllData();
+    const sign = change > 0 ? '+' : '';
+    const note = 'Quick Adjustment';
+    
+    // Attempt audit log
+    await fetch('/api/audit', {
+      method: 'POST',
+      headers: apiHeaders(),
+      body: JSON.stringify({ event: 'STOCK_ADJUST', detail: `[${item.sku}] ${item.name} Qt: ${item.qty} → ${newQty} (${sign}${change}). Note: ${note}` })
+    });
+
+    renderInventory();
+    renderOverview();
+  } catch(e) {
+    showToast('Failed to adjust stock', 'error');
+  }
+};
+
 // --- Stock Adjustment Modal ---
 let _adjId = null;
 function openAdjustModal(id) {
@@ -1533,10 +1602,13 @@ window.renderReports = function() {
   
   let mTrimQty = 0;
   let mFabQty = 0;
+  let mTotalCost = 0;
   monthlyBatches.forEach(b => {
       b.materials.forEach(m => {
-          if (m.type === 'trim') mTrimQty += m.consumed_qty;
-          if (m.type === 'fabric') mFabQty += m.consumed_qty;
+          const mItem = _items.find(i => i.id === m.item_id);
+          const uCost = mItem ? (parseFloat(mItem.unit_cost) || 0) : 0;
+          if (m.type === 'trim') { mTrimQty += m.consumed_qty; mTotalCost += (m.consumed_qty * uCost); }
+          if (m.type === 'fabric') { mFabQty += m.consumed_qty; mTotalCost += (m.consumed_qty * uCost); }
       });
   });
 
@@ -1546,6 +1618,10 @@ window.renderReports = function() {
   if (rmTrim) rmTrim.textContent = mTrimQty;
   const rmFab = document.getElementById('rm-fab-qty');
   if (rmFab) rmFab.textContent = mFabQty.toFixed(2) + 'm';
+  const rmCost = document.getElementById('do-month-cost');
+  if (rmCost) rmCost.textContent = '$' + mTotalCost.toFixed(2);
+  const rmTotalCost = document.getElementById('rm-total-cost');
+  if (rmTotalCost) rmTotalCost.textContent = '$' + mTotalCost.toFixed(2);
   
   // Low Stock
   const lowItems = _items.filter(i => stockStatus(i) === 'low' || stockStatus(i) === 'out');
@@ -2499,8 +2575,8 @@ window.initTheme = function() {
   
   const updateLogos = (theme) => {
     const isDark = theme === 'dark';
-    document.querySelectorAll('.login-logo-img, .sidebar-brand img').forEach(img => {
-      img.src = isDark ? "/Images/NIA%20dark.png" : "/Images/NIA%20clean.png";
+    document.querySelectorAll('.sidebar-brand img').forEach(img => {
+      img.src = isDark ? "/Images/NIA%20Dark%20mode.png" : "/Images/NIA%20Light%20mode.png";
     });
   };
   
@@ -2573,7 +2649,7 @@ window.openSaleModal = function() {
           </div>
           <div class="product-card-body">
             <div class="product-card-name">${esc(p.name)}</div>
-            <div class="product-card-qty" style="color:${stockColor}">${p.qty} avail</div>
+            <div class="product-card-qty" style="color:${stockColor}">${p.qty} Available</div>
           </div>
         </div>
       `;
@@ -2628,7 +2704,8 @@ window.renderSaleSelectedItems = function() {
         <div style="font-size:13px; font-weight:600;">${esc(p.name)} <span style="color:var(--muted); font-size:11px;">(${esc(p.sku)})</span></div>
         <div style="display:flex; align-items:center; gap:8px;">
           <span style="font-size:11px; color:var(--muted);">Max: ${p.qty}</span>
-          <input type="number" class="sale-qty-input" data-id="${p.id}" value="${val}" min="1" max="${p.qty}" style="width:80px; padding:6px; border:1px solid var(--border); border-radius:4px; font-family:inherit;">
+          <input type="number" class="sale-qty-input" data-id="${p.id}" value="${val}" min="1" max="${p.qty}" style="width:70px; padding:6px; border:1px solid var(--border); border-radius:4px; font-family:inherit;">
+          <input type="number" class="sale-price-input" data-id="${p.id}" value="${p.unit_cost || 0}" step="0.01" style="width:80px; padding:6px; border:1px solid var(--border); border-radius:4px; font-family:inherit;" placeholder="Price">
           <button class="btn btn-secondary btn-sm" onclick="toggleSaleProduct('${p.id}')" style="padding:4px 8px; color:var(--danger); border:none;">×</button>
         </div>
       </div>
@@ -2652,6 +2729,8 @@ window.saveSale = async function() {
     const id = input.dataset.id;
     const qty = parseFloat(input.value);
     const p = _items.find(i => i.id === id);
+    const priceInput = document.querySelector(`.sale-price-input[data-id="${id}"]`);
+    const price = priceInput ? parseFloat(priceInput.value) : (p.unit_cost || 0);
     if (!qty || qty <= 0) {
       showToast(`Invalid quantity for ${p.name}`, 'error');
       valid = false;
@@ -2660,7 +2739,7 @@ window.saveSale = async function() {
       showToast(`Not enough stock for ${p.name}. Only ${p.qty} available.`, 'error');
       valid = false;
     }
-    items.push({ item_id: id, qty });
+    items.push({ item_id: id, qty, price });
   });
 
   if (!valid) return;
@@ -2679,9 +2758,33 @@ window.saveSale = async function() {
     await fetchAllData();
     renderProductStock();
     renderOverview();
+    if(typeof renderSales === 'function') renderSales();
   } catch(e) {
     showToast(e.message, 'error');
   }
+};
+
+window.renderSales = function() {
+  const tbody = document.getElementById('salesTbody');
+  if (!tbody) return;
+  if (_sales.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>No sales history found</p></div></td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = _sales.map(s => {
+    const item = _items.find(i => i.id === s.item_id);
+    const name = item ? item.name : s.item_id;
+    const date = new Date(s.ts).toLocaleString('en-GB');
+    return `<tr>
+      <td>${date}</td>
+      <td style="font-weight:600;">${esc(s.buyer)}</td>
+      <td>${esc(name)}</td>
+      <td>${s.qty}</td>
+      <td>${(s.unit_price || 0).toFixed(2)}</td>
+      <td style="font-weight:600; color:var(--success);">${(s.total_price || 0).toFixed(2)}</td>
+    </tr>`;
+  }).join('');
 };
 
 // ================================================================
