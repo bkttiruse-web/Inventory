@@ -783,13 +783,16 @@ function renderOverview() {
   
   const isAdmin = getSession()?.role === 'admin';
   
+  const fmtN = (n) => typeof n === 'number' ? n.toLocaleString() : n;
+  const fmtP = (n) => typeof n === 'number' ? n.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) : n;
+
   // 1. Products
   const products = items.filter(i => i.category === 'Products');
   const prodTotal = products.reduce((sum, i) => sum + i.qty, 0);
   const prodPriceTotal = products.reduce((sum, i) => sum + (i.qty * getPrice(i)), 0);
-  document.getElementById('do-prod-total').textContent = prodTotal;
+  document.getElementById('do-prod-total').textContent = fmtN(prodTotal);
   const prodPriceTotalEl = document.getElementById('do-prod-price-total');
-  if(prodPriceTotalEl) prodPriceTotalEl.textContent = '$' + prodPriceTotal.toFixed(2);
+  if(prodPriceTotalEl) prodPriceTotalEl.textContent = '$' + fmtP(prodPriceTotal);
   
   const prodBody = document.getElementById('do-prod-tbody');
   if (prodBody) {
@@ -801,8 +804,8 @@ function renderOverview() {
               return `<tr>
                   <td>${getImg(p)}</td>
                   <td>${esc(p.name)}<br><span style="font-size:11px;color:var(--muted)">(${esc(p.sku)})</span></td>
-                  <td style="font-weight:600;">${p.qty}</td>
-                  ${isAdmin ? `<td>$${uPrice.toFixed(2)}</td><td style="font-weight:600; color:var(--success);">$${(p.qty * uPrice).toFixed(2)}</td>` : ''}
+                  <td style="font-weight:600;">${fmtN(p.qty)}</td>
+                  ${isAdmin ? `<td>$${fmtP(uPrice)}</td><td style="font-weight:600; color:var(--success);">$${fmtP(p.qty * uPrice)}</td>` : ''}
               </tr>`;
           }).join('');
       }
@@ -812,9 +815,9 @@ function renderOverview() {
   const trims = items.filter(i => i.category === 'Trim');
   const trimTotal = trims.reduce((sum, i) => sum + i.qty, 0);
   const trimPriceTotal = trims.reduce((sum, i) => sum + (i.qty * getPrice(i)), 0);
-  document.getElementById('do-trim-total').textContent = trimTotal;
+  document.getElementById('do-trim-total').textContent = fmtN(trimTotal);
   const trimPriceTotalEl = document.getElementById('do-trim-price-total');
-  if(trimPriceTotalEl) trimPriceTotalEl.textContent = '$' + trimPriceTotal.toFixed(2);
+  if(trimPriceTotalEl) trimPriceTotalEl.textContent = '$' + fmtP(trimPriceTotal);
   
   const trimBody = document.getElementById('do-trim-tbody');
   if (trimBody) {
@@ -826,8 +829,8 @@ function renderOverview() {
               return `<tr>
                   <td>${getImg(t)}</td>
                   <td>${esc(t.name)}<br><span style="font-size:11px;color:var(--muted)">(${esc(t.sku)})</span></td>
-                  <td style="font-weight:600;">${t.qty}</td>
-                  ${isAdmin ? `<td>$${uPrice.toFixed(2)}</td><td style="font-weight:600; color:var(--success);">$${(t.qty * uPrice).toFixed(2)}</td>` : ''}
+                  <td style="font-weight:600;">${fmtN(t.qty)}</td>
+                  ${isAdmin ? `<td>$${fmtP(uPrice)}</td><td style="font-weight:600; color:var(--success);">$${fmtP(t.qty * uPrice)}</td>` : ''}
               </tr>`;
           }).join('');
       }
@@ -837,9 +840,9 @@ function renderOverview() {
   const fabrics = items.filter(i => i.category === 'Fabric' || i.category === 'Raw Materials' && i.unit === 'meters');
   const fabTotal = fabrics.reduce((sum, i) => sum + i.qty, 0);
   const fabPriceTotal = fabrics.reduce((sum, i) => sum + (i.qty * getPrice(i)), 0);
-  document.getElementById('do-fab-total').textContent = fabTotal.toFixed(2) + 'm';
+  document.getElementById('do-fab-total').textContent = fmtN(fabTotal) + 'm';
   const fabPriceTotalEl = document.getElementById('do-fab-price-total');
-  if(fabPriceTotalEl) fabPriceTotalEl.textContent = '$' + fabPriceTotal.toFixed(2);
+  if(fabPriceTotalEl) fabPriceTotalEl.textContent = '$' + fmtP(fabPriceTotal);
   
   const fabBody = document.getElementById('do-fab-tbody');
   if (fabBody) {
@@ -851,8 +854,8 @@ function renderOverview() {
               return `<tr>
                   <td>${getImg(f)}</td>
                   <td>${esc(f.name)}<br><span style="font-size:11px;color:var(--muted)">(${esc(f.sku)})</span></td>
-                  <td style="font-weight:600;">${f.qty} ${esc(f.unit)}</td>
-                  ${isAdmin ? `<td>$${uPrice.toFixed(2)}</td><td style="font-weight:600; color:var(--success);">$${(f.qty * uPrice).toFixed(2)}</td>` : ''}
+                  <td style="font-weight:600;">${fmtN(f.qty)} ${esc(f.unit)}</td>
+                  ${isAdmin ? `<td>$${fmtP(uPrice)}</td><td style="font-weight:600; color:var(--success);">$${fmtP(f.qty * uPrice)}</td>` : ''}
               </tr>`;
           }).join('');
       }
@@ -911,13 +914,13 @@ function renderOverview() {
   });
 
   const doMonProd = document.getElementById('do-month-prod');
-  if (doMonProd) doMonProd.textContent = mProdQty;
+  if (doMonProd) doMonProd.textContent = fmtN(mProdQty);
   const doMonTrim = document.getElementById('do-month-trim');
-  if (doMonTrim) doMonTrim.textContent = mTrimQty;
+  if (doMonTrim) doMonTrim.textContent = fmtN(mTrimQty);
   const doMonFab = document.getElementById('do-month-fab');
-  if (doMonFab) doMonFab.textContent = mFabQty.toFixed(2) + 'm';
+  if (doMonFab) doMonFab.textContent = fmtN(mFabQty) + 'm';
   const doMonCost = document.getElementById('do-month-cost');
-  if (doMonCost) doMonCost.textContent = '$' + mTotalCost.toFixed(2);
+  if (doMonCost) doMonCost.textContent = '$' + fmtP(mTotalCost);
 
   // Global Alert Badges
   const banner = document.getElementById('alertBanner');
@@ -1002,7 +1005,7 @@ function renderInventoryTable(items) {
       <td>
         <div style="display:flex; align-items:center; gap:8px; font-weight:600;">
           <button class="btn btn-secondary btn-sm" onclick="quickAdjustStock('${item.id}', -1)" style="padding:2px 8px; border-radius:4px; font-size:14px; font-weight:bold;">-</button>
-          <span>${item.qty} ${esc(item.unit || 'pcs')}</span>
+          <span id="qty-val-${item.id}">${item.qty.toLocaleString()} ${esc(item.unit || 'pcs')}</span>
           <button class="btn btn-secondary btn-sm" onclick="quickAdjustStock('${item.id}', 1)" style="padding:2px 8px; border-radius:4px; font-size:14px; font-weight:bold;">+</button>
         </div>
       </td>
@@ -1461,10 +1464,21 @@ window.quickAdjustStock = async function(id, change) {
     showToast('Stock cannot go below 0', 'error');
     return;
   }
+
+  // Optimistic UI update instantly without refreshing layout
+  item.qty = newQty;
+  const qtySpan = document.getElementById(`qty-val-${item.id}`);
+  if (qtySpan) qtySpan.textContent = `${newQty.toLocaleString()} ${item.unit || 'pcs'}`;
+
   try {
     const updated = { ...item, qty: newQty };
     await fetch('/api/items/' + item.id, { method: 'PUT', headers: apiHeaders(), body: JSON.stringify(updated) });
-    await fetchAllData();
+    
+    // Background refresh
+    fetchAllData().then(() => {
+        if(typeof updateAlertBadge === 'function') updateAlertBadge();
+    });
+    
     const sign = change > 0 ? '+' : '';
     const note = 'Quick Adjustment';
     
@@ -1472,13 +1486,14 @@ window.quickAdjustStock = async function(id, change) {
     await fetch('/api/audit', {
       method: 'POST',
       headers: apiHeaders(),
-      body: JSON.stringify({ event: 'STOCK_ADJUST', detail: `[${item.sku}] ${item.name} Qt: ${item.qty} → ${newQty} (${sign}${change}). Note: ${note}` })
+      body: JSON.stringify({ event: 'STOCK_ADJUST', detail: `[${item.sku}] ${item.name} Qt: ${item.qty - change} → ${newQty} (${sign}${change}). Note: ${note}` })
     });
 
-    renderInventory();
-    renderOverview();
   } catch(e) {
-    showToast('Failed to adjust stock', 'error');
+    showToast('Failed to sync stock adjustment', 'error');
+    // Rollback
+    item.qty = item.qty - change;
+    if (qtySpan) qtySpan.textContent = `${item.qty.toLocaleString()} ${item.unit || 'pcs'}`;
   }
 };
 
@@ -1615,16 +1630,19 @@ window.renderReports = function() {
       });
   });
 
+  const fmtN = (n) => typeof n === 'number' ? n.toLocaleString() : n;
+  const fmtP = (n) => typeof n === 'number' ? n.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) : n;
+
   const rmProd = document.getElementById('rm-prod-qty');
-  if (rmProd) rmProd.textContent = mProdQty;
+  if (rmProd) rmProd.textContent = fmtN(mProdQty);
   const rmTrim = document.getElementById('rm-trim-qty');
-  if (rmTrim) rmTrim.textContent = mTrimQty;
+  if (rmTrim) rmTrim.textContent = fmtN(mTrimQty);
   const rmFab = document.getElementById('rm-fab-qty');
-  if (rmFab) rmFab.textContent = mFabQty.toFixed(2) + 'm';
+  if (rmFab) rmFab.textContent = fmtN(mFabQty) + 'm';
   const rmCost = document.getElementById('do-month-cost');
-  if (rmCost) rmCost.textContent = '$' + mTotalCost.toFixed(2);
+  if (rmCost) rmCost.textContent = '$' + fmtP(mTotalCost);
   const rmTotalCost = document.getElementById('rm-total-cost');
-  if (rmTotalCost) rmTotalCost.textContent = '$' + mTotalCost.toFixed(2);
+  if (rmTotalCost) rmTotalCost.textContent = '$' + fmtP(mTotalCost);
   
   // Low Stock
   const lowItems = _items.filter(i => stockStatus(i) === 'low' || stockStatus(i) === 'out');
@@ -1638,8 +1656,8 @@ window.renderReports = function() {
               return `<tr>
                   <td>${esc(i.name)}</td>
                   <td><span class="badge badge-${catBadge(i.category)}">${esc(i.category)}</span></td>
-                  <td style="color:var(--${isOut ? 'danger' : 'warning'}); font-weight:bold;">${i.qty}</td>
-                  <td>${i.threshold}</td>
+                  <td style="color:var(--${isOut ? 'danger' : 'warning'}); font-weight:bold;">${fmtN(i.qty)}</td>
+                  <td>${fmtN(i.threshold)}</td>
                   <td>${isOut ? 'Empty' : 'Low'}</td>
               </tr>`;
           }).join('');
@@ -2775,18 +2793,53 @@ window.renderSales = function() {
     return;
   }
 
-  tbody.innerHTML = _sales.map(s => {
-    const item = _items.find(i => i.id === s.item_id);
-    const name = item ? item.name : s.item_id;
-    const date = new Date(s.ts).toLocaleString('en-GB');
-    return `<tr>
-      <td>${date}</td>
-      <td style="font-weight:600;">${esc(s.buyer)}</td>
-      <td>${esc(name)}</td>
-      <td>${s.qty}</td>
-      <td>${(s.unit_price || 0).toFixed(2)}</td>
-      <td style="font-weight:600; color:var(--success);">${(s.total_price || 0).toFixed(2)}</td>
-    </tr>`;
+  const fmtN = (n) => typeof n === 'number' ? n.toLocaleString() : n;
+  const fmtP = (n) => typeof n === 'number' ? n.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) : n;
+
+  // Group by exact timestamp + buyer
+  const groups = {};
+  _sales.forEach(s => {
+      const key = s.ts + '|' + s.buyer;
+      if(!groups[key]) groups[key] = { ts: s.ts, buyer: s.buyer, items: [], totalQty: 0, totalPrice: 0 };
+      groups[key].items.push(s);
+      groups[key].totalQty += s.qty;
+      groups[key].totalPrice += (s.total_price || 0);
+  });
+
+  tbody.innerHTML = Object.values(groups).map((g, idx) => {
+      const date = new Date(g.ts).toLocaleString('en-GB');
+      const gId = 'sg-' + idx;
+      
+      let html = `<tr style="cursor:pointer;" onclick="const e = document.getElementById('${gId}'); const b = this.querySelector('.sg-btn'); if(e.style.display==='none'){e.style.display='table-row';b.textContent='▲';this.style.background='var(--hover)';}else{e.style.display='none';b.textContent='▼';this.style.background='';}">
+        <td>${date}</td>
+        <td style="font-weight:600;">${esc(g.buyer)}</td>
+        <td>${g.items.length} Product(s) <span class="sg-btn" style="font-size:10px; color:var(--muted); margin-left:4px;">▼</span></td>
+        <td style="font-weight:600;">${fmtN(g.totalQty)}</td>
+        <td style="color:var(--muted)">—</td>
+        <td style="font-weight:600; color:var(--success);">$${fmtP(g.totalPrice)}</td>
+      </tr>`;
+      
+      html += `<tr id="${gId}" style="display:none; background:#fafafa;">
+        <td colspan="6" style="padding:0;">
+          <table style="width:100%; margin:0; background:transparent; border-top:1px solid var(--border);">
+            <tbody>
+              ${g.items.map(s => {
+                  const item = _items.find(i => i.id === s.item_id);
+                  const name = item ? item.name : s.item_id;
+                  return `<tr>
+                    <td style="width:16%;"></td>
+                    <td style="width:16%;"></td>
+                    <td style="color:var(--text); font-size:13px;">↳ ${esc(name)}</td>
+                    <td style="width:16%;">${fmtN(s.qty)}</td>
+                    <td style="width:16%;">$${fmtP(s.unit_price || 0)}</td>
+                    <td style="width:16%; color:var(--success);">$${fmtP(s.total_price || 0)}</td>
+                  </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </td>
+      </tr>`;
+      return html;
   }).join('');
 };
 

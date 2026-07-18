@@ -731,16 +731,16 @@ tr.row-out:hover { background: #fee2e2; }
     justify-content: center;
   }
   
-  /* Hide admin-only columns on mobile for staff */
-  .admin-only {
-    display: none !important;
-  }
-  
   /* Card header stacks */
   .card-header {
     flex-direction: column;
     align-items: flex-start !important;
     gap: 12px;
+  }
+  
+  .dash-accordion-header {
+    flex-wrap: wrap;
+    gap: 8px;
   }
   
   /* Topbar subtitle hidden on small screens */
@@ -1049,5 +1049,194 @@ tr.row-out:hover { background: #fee2e2; }
   }
   .item-card-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* =================================================================
+   COMPREHENSIVE MOBILE FIX — prevents overflow & clipping on phones
+   ================================================================= */
+@media (max-width: 768px) {
+
+  /* Prevent the whole app from overflowing the viewport */
+  html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
+  .app-layout {
+    flex-direction: column;
+    overflow-x: hidden;
+  }
+
+  /* Main content never pushes past viewport */
+  .main-content {
+    width: 100% !important;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  /* Pages clip their own overflow; tables inside scroll */
+  .page {
+    padding: 16px 12px;
+    overflow-x: hidden;
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+  /* All tables inside a .table-wrap scroll horizontally */
+  .table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+  }
+
+  /* Card header: wrap content that doesn't fit */
+  .card-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Topbar: allow wrapping so date/buttons don't clip */
+  .topbar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px 16px;
+  }
+  .topbar-actions {
+    flex-wrap: wrap;
+  }
+
+  /* Overview accordion: header stacks cleanly */
+  .dash-accordion-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px 16px;
+  }
+  .dash-accordion-header > div:last-child {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .dash-accordion-content {
+    padding: 12px 14px 16px;
+    overflow-x: auto;
+  }
+
+  /* Stats grid: two columns, never overflow */
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px;
+  }
+
+  /* Reports grid: single column */
+  .reports-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Filter bars stack nicely */
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    width: 100%;
+  }
+  .filter-bar input,
+  .filter-bar select,
+  .filter-bar button {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Modals: constrain to viewport */
+  .modal-overlay {
+    padding: 12px;
+    align-items: flex-start;
+  }
+  .modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: calc(100vh - 24px);
+    overflow-y: auto;
+    margin: 0;
+  }
+  .modal-body {
+    padding: 16px;
+    overflow-y: auto;
+  }
+
+  /* Action button groups don't spill */
+  .actions {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  /* Buttons: touch-friendly minimum sizing */
+  .btn {
+    min-height: 36px;
+  }
+
+  /* Prevent report tabs from clipping */
+  .reports-tabs {
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+
+  /* Batch materials section: always scrollable */
+  .prod-material-scroll-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Low stock cards horizontal strip: clamp height */
+  .low-stock-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Production batch entry form */
+  .form-row {
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+  .form-row .form-group {
+    width: 100% !important;
+  }
+}
+
+/* Extra-small phones (≤ 420px) */
+@media (max-width: 420px) {
+  .stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .dash-accordion-stat {
+    font-size: 15px;
+    padding: 3px 10px;
+  }
+
+  .page {
+    padding: 12px 10px;
+  }
+
+  /* Inventory qty buttons don't overflow */
+  .actions button {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+
+  th, td {
+    padding: 8px 8px !important;
+    font-size: 12px;
+  }
+
+  /* Topbar title smaller */
+  .topbar h1 {
+    font-size: 17px;
   }
 }
