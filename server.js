@@ -415,7 +415,7 @@ app.get('/api/batches', authenticateToken, async (req, res) => {
 
 app.post('/api/batches', authenticateToken, async (req, res) => {
     try {
-        const { product_id, produced_qty, total_duration, materials, stages } = req.body;
+        const { product_id, produced_qty, total_duration, materials, stages, start_date, end_date } = req.body;
         
         // Validate required fields
         if (!product_id || !produced_qty) {
@@ -440,8 +440,8 @@ app.post('/api/batches', authenticateToken, async (req, res) => {
         const productName = productItem.name;
         const actualProductId = productItem.id;
 
-        await db.run('INSERT INTO product_batches VALUES (?, ?, ?, ?, ?, ?)',
-            [batch_id, actualProductId, batch_number, produced_qty, total_duration, created_at]);
+        await db.run('INSERT INTO product_batches VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [batch_id, actualProductId, batch_number, produced_qty, total_duration, created_at, start_date || null, end_date || null]);
 
         // Increment stock for the product produced
         await db.run('UPDATE items SET qty = qty + ? WHERE id = ?', [produced_qty, productItem.id]);

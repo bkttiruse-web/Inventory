@@ -740,7 +740,7 @@
       <!-- Section A: Production Info -->
       <div>
         <h4 style="margin-bottom:12px; font-size:14px; font-weight:700; text-transform:uppercase; color:var(--muted); letter-spacing:.5px;">📦 Production Info</h4>
-        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; align-items: start;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items: start;">
           <!-- Custom image-rich product picker -->
           <div class="form-group" style="margin:0; position:relative;">
             <label>Product *</label>
@@ -760,10 +760,6 @@
           <div class="form-group" style="margin:0;">
             <label for="prod-qty">Quantity Produced *</label>
             <input type="number" id="prod-qty" min="1" placeholder="e.g. 10" oninput="updateProductionSummary()">
-          </div>
-          <div class="form-group" style="margin:0;">
-            <label for="prod-date">Production Date *</label>
-            <input type="date" id="prod-date">
           </div>
         </div>
       </div>
@@ -796,6 +792,21 @@
               <div>Type/color</div><div>Quantity</div><div>Unit Cost</div><div>Total</div><div></div>
             </div>
             <div style="font-size:13px; color:var(--muted); padding:8px 0;">Click "+ Add Fabric" to log fabric usage.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section D: Date Range -->
+      <div>
+        <h4 style="margin-bottom:12px; font-size:14px; font-weight:700; text-transform:uppercase; color:var(--muted); letter-spacing:.5px;">📅 Production Dates</h4>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div class="form-group" style="margin:0;">
+            <label for="prod-start-date">From Date *</label>
+            <input type="date" id="prod-start-date" required>
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label for="prod-end-date">To Date *</label>
+            <input type="date" id="prod-end-date" required>
           </div>
         </div>
       </div>

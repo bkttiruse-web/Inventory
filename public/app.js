@@ -2143,10 +2143,14 @@ window.toggleBatchAccordion = function(id) {
 window.openProductionModal = function() {
   const modal = document.getElementById('productionModal');
 
-  // Pre-fill today's date
-  const dateEl = document.getElementById('prod-date');
-  if (dateEl && !dateEl.value) {
-    dateEl.value = new Date().toISOString().split('T')[0];
+  // Pre-fill today's date for start and end dates
+  const startEl = document.getElementById('prod-start-date');
+  const endEl = document.getElementById('prod-end-date');
+  if (startEl && !startEl.value) {
+    startEl.value = new Date().toISOString().split('T')[0];
+  }
+  if (endEl && !endEl.value) {
+    endEl.value = new Date().toISOString().split('T')[0];
   }
 
   // Reset hidden product input and visual trigger
@@ -2335,11 +2339,13 @@ function formatDuration(d1, d2) {
 window.saveProduction = async function() {
   const productId = document.getElementById('prod-product').value;
   const producedQty = parseInt(document.getElementById('prod-qty').value);
-  const prodDate = document.getElementById('prod-date')?.value;
+  const startDate = document.getElementById('prod-start-date')?.value;
+  const endDate = document.getElementById('prod-end-date')?.value;
 
   if (!productId) return showToast('Please select a product', 'error');
   if (!producedQty || producedQty < 1) return showToast('Please enter a valid quantity', 'error');
-  if (!prodDate) return showToast('Please enter a production date', 'error');
+  if (!startDate || !endDate) return showToast('Please enter both start and end production dates', 'error');
+  if (new Date(startDate) > new Date(endDate)) return showToast('Start date cannot be after end date', 'error');
 
   const materials = [];
   document.querySelectorAll('#prod-trim-rows .prod-material-row').forEach(row => {
@@ -2381,7 +2387,7 @@ window.saveProduction = async function() {
     const res = await fetch('/api/batches', {
       method: 'POST',
       headers: apiHeaders(),
-      body: JSON.stringify({ product_id: productId, produced_qty: producedQty, total_duration: 'N/A', materials, stages: [], production_date: prodDate })
+      body: JSON.stringify({ product_id: productId, produced_qty: producedQty, total_duration: 'N/A', materials, stages: [], start_date: startDate, end_date: endDate })
     });
     if (!res.ok) {
       const errorData = await res.json();
@@ -2409,7 +2415,14 @@ window.renderBatches = function() {
   const isAdmin = getSession()?.role === 'admin';
 
   container.innerHTML = _batches.map(b => {
-    const date = new Date(b.created_at).toLocaleDateString('en-GB');
+    let dateRangeStr = '';
+    if (b.start_date && b.end_date) {
+      const sDate = new Date(b.start_date).toLocaleDateString('en-GB');
+      const eDate = new Date(b.end_date).toLocaleDateString('en-GB');
+      dateRangeStr = sDate === eDate ? sDate : `${sDate} — ${eDate}`;
+    } else {
+      dateRangeStr = new Date(b.created_at).toLocaleDateString('en-GB');
+    }
     const product = _items.find(i => i.id === b.product_id || i.sku === b.product_id || i.name === b.product_id);
     const productName = product ? product.name : b.product_id;
     const batchDisplay = `#${b.batch_number.toString().padStart(3, '0')}`;
@@ -2462,7 +2475,7 @@ window.renderBatches = function() {
               ${imgHtml}
               <div>
                 <div style="font-weight:600; font-size:15px;">${esc(productName)}</div>
-                <div style="font-size:12px; color:var(--muted);">${date}</div>
+                <div style="font-size:12px; color:var(--muted);">${esc(dateRangeStr)}</div>
               </div>
             </div>
           </div>

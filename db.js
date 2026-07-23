@@ -106,8 +106,21 @@ async function initDb() {
             batch_number INTEGER,
             produced_qty INTEGER,
             total_duration TEXT,
-            created_at TEXT
+            created_at TEXT,
+            start_date TEXT,
+            end_date TEXT
         )`);
+
+    // Check if start_date exists in product_batches (migration)
+    const batchInfo = await client.query(
+      `SELECT column_name FROM information_schema.columns WHERE table_name = 'product_batches'`,
+    );
+    const hasStartDate = batchInfo.rows.some((c) => c.column_name === "start_date");
+    if (!hasStartDate) {
+      await client.query(`ALTER TABLE product_batches ADD COLUMN start_date TEXT`);
+      await client.query(`ALTER TABLE product_batches ADD COLUMN end_date TEXT`);
+      console.log("Migration: start_date and end_date columns added to product_batches.");
+    }
 
     // Batch Materials (Trims and Fabrics used)
     await client.query(`CREATE TABLE IF NOT EXISTS batch_materials (
