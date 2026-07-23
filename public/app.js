@@ -2163,13 +2163,16 @@ window.openProductionModal = function() {
   const modal = document.getElementById('productionModal');
   const selectEl = document.getElementById('prod-product');
   
-  // Populate product dropdown
+  // Populate product dropdown with images if available
   const products = _items.filter(i => i.category === 'Products');
   selectEl.innerHTML = '<option value="" disabled selected>Select a product...</option>' + 
     products.map(p => `<option value="${esc(p.id)}">${esc(p.name)} (${esc(p.sku)})</option>`).join('');
 
   // Reset basic info
   selectEl.value = '';
+  const previewCont = document.getElementById('prod-product-preview-container');
+  if (previewCont) previewCont.style.display = 'none';
+
   const isAdmin = getSession()?.role === 'admin';
   document.getElementById('prod-summary-cost-container').style.display = isAdmin ? 'block' : 'none';
   document.getElementById('prod-summary-cost').textContent = '0.00 ETB';
@@ -2185,19 +2188,32 @@ window.openProductionModal = function() {
   document.getElementById('prod-trim-rows').innerHTML = headerHtml + '<div class="empty-placeholder" style="font-size:13px; color:var(--muted); padding:8px 0;">Click "+ Add Trim" to log trim usage.</div>';
   document.getElementById('prod-fabric-rows').innerHTML = headerHtml + '<div class="empty-placeholder" style="font-size:13px; color:var(--muted); padding:8px 0;">Click "+ Add Fabric" to log fabric usage.</div>';
   
-  // Render Stages (fixed 5)
-  const stages = ['Trim Prep', 'Fabric Cut Prep', 'Print Prep', 'Sewing', 'Finishing & QC'];
-  const stageContainer = document.getElementById('prod-stages-container');
-  stageContainer.innerHTML = stages.map((s, i) => `
-    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px; align-items:center; background:var(--bg); padding:10px; border-radius:6px; border:1px solid var(--border);">
-      <div style="font-weight:600; font-size:13px;">${s}</div>
-      <input type="date" class="stage-start" data-stage="${s}" data-index="${i}" onchange="validateStageDates(this); updateProductionSummary()" style="padding:6px; font-size:12px; border:1px solid var(--border); border-radius:4px; font-family:inherit;">
-      <input type="date" class="stage-end" data-stage="${s}" data-index="${i}" onchange="validateStageDates(this); updateProductionSummary()" style="padding:6px; font-size:12px; border:1px solid var(--border); border-radius:4px; font-family:inherit;">
-    </div>
-  `).join('');
-
   updateProductionSummary();
   modal.classList.add('open');
+};
+
+window.updateProductionProductPreview = function() {
+  const selectEl = document.getElementById('prod-product');
+  const previewCont = document.getElementById('prod-product-preview-container');
+  const imgCont = document.getElementById('prod-product-preview-img');
+  const nameEl = document.getElementById('prod-product-preview-name');
+  const skuEl = document.getElementById('prod-product-preview-sku');
+  
+  if (!selectEl || !previewCont || !imgCont || !nameEl || !skuEl) return;
+  
+  const selectedId = selectEl.value;
+  const p = _items.find(i => i.id === selectedId);
+  
+  if (p) {
+    nameEl.textContent = p.name;
+    skuEl.textContent = p.sku;
+    imgCont.innerHTML = p.image_url 
+      ? `<img src="${esc(p.image_url)}" style="width:100%; height:100%; object-fit:contain;" />`
+      : `<span style="font-size: 24px;">📦</span>`;
+    previewCont.style.display = 'flex';
+  } else {
+    previewCont.style.display = 'none';
+  }
 };
 
 window.closeProductionModal = function() {
@@ -2279,66 +2295,9 @@ window.updateGrandTotal = function() {
 window.updateProductionSummary = function() {
   const qty = document.getElementById('prod-qty').value || '—';
   document.getElementById('prod-summary-qty').textContent = qty;
-
-  const starts = Array.from(document.querySelectorAll('.stage-start')).map(i => i.value).filter(v => v);
-  const ends = Array.from(document.querySelectorAll('.stage-end')).map(i => i.value).filter(v => v);
-  
-  if (starts.length > 0 && ends.length > 0) {
-    const minStart = new Date(Math.min(...starts.map(s => new Date(s))));
-    const maxEnd = new Date(Math.max(...ends.map(e => new Date(e))));
-    document.getElementById('prod-summary-duration').textContent = formatDuration(minStart, maxEnd);
-  } else {
-    document.getElementById('prod-summary-duration').textContent = '—';
-  }
 };
 
-// Task #15 & #2: Real-time date validation for production stages with overlap detection
-window.validateStageDates = function(inputElement) {
-  const row = inputElement.closest('div[style*="grid-template-columns"]');
-  if (!row) return;
-  
-  const startInput = row.querySelector('.stage-start');
-  const endInput = row.querySelector('.stage-end');
-  
-  if (!startInput || !endInput) return;
-  
-  const startDate = startInput.value;
-  const endDate = endInput.value;
-  const currentIndex = parseInt(startInput.dataset.index);
-  
-  // Validate within same stage: end date must be >= start date
-  if (startDate && endDate) {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    
-    if (end < start) {
-      // Show error
-      endInput.style.borderColor = 'var(--danger)';
-      endInput.style.borderWidth = '2px';
-      showToast('End date cannot be before start date!', 'error');
-      
-      // Reset the end date
-      endInput.value = '';
-      setTimeout(() => {
-        endInput.style.borderColor = '';
-        endInput.style.borderWidth = '';
-      }, 2000);
-      return;
-    }
-  }
-
-  
-  // Valid date range - clear any error styling
-  startInput.style.borderColor = '';
-  startInput.style.borderWidth = '';
-  endInput.style.borderColor = '';
-  endInput.style.borderWidth = '';
-  
-  // Set min attribute on end date based on start date
-  if (startDate && inputElement.classList.contains('stage-start')) {
-    endInput.setAttribute('min', startDate);
-  }
-};
+// Stages validation and date checks removed because stages are eliminated.
 
 function formatDuration(d1, d2) {
   const diff = d2 - d1;
@@ -2382,7 +2341,6 @@ window.saveProduction = async function() {
     }
   });
 
-  // Task #7: Validate sufficient stock for materials
   for (let mat of materials) {
     const item = _items.find(i => i.id === mat.material_id);
     if (item && item.qty < mat.consumed_qty) {
@@ -2391,40 +2349,11 @@ window.saveProduction = async function() {
     }
   }
 
-  const stages = [];
-  document.querySelectorAll('#prod-stages-container > div').forEach(row => {
-    const name = row.children[0].textContent;
-    const start = row.querySelector('.stage-start').value;
-    const end = row.querySelector('.stage-end').value;
-    if (start && end) {
-      // Task #9: Validate no date overlaps
-      const startDate = new Date(start);
-      const endDate = new Date(end);
-      if (endDate < startDate) {
-        showToast(`Invalid dates for ${name}: End date cannot be before start date`, 'error');
-        return;
-      }
-      stages.push({
-        stage_name: name,
-        start_date: start,
-        end_date: end,
-        duration: formatDuration(startDate, endDate)
-      });
-    }
-  });
-
-  if (stages.length === 0) return showToast('Please enter dates for at least one stage', 'error');
-
-  // Sort stages chronologically by start date
-  stages.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
-
-  const totalDuration = document.getElementById('prod-summary-duration').textContent;
-
   try {
     const res = await fetch('/api/batches', {
       method: 'POST',
       headers: apiHeaders(),
-      body: JSON.stringify({ product_id: productId, produced_qty: producedQty, total_duration: totalDuration, materials, stages })
+      body: JSON.stringify({ product_id: productId, produced_qty: producedQty, total_duration: 'N/A', materials, stages: [] })
     });
     if (!res.ok) {
       const errorData = await res.json();
@@ -2492,14 +2421,21 @@ window.renderBatches = function() {
       `).join('');
     }
 
+    const imgHtml = product && product.image_url 
+      ? `<img src="${esc(product.image_url)}" style="width:36px; height:36px; object-fit:contain; border-radius:4px; border:1px solid var(--border); margin-right:10px;" />`
+      : `<span style="display:inline-block; width:36px; height:36px; line-height:36px; text-align:center; background:var(--bg); border-radius:4px; margin-right:10px; border:1px solid var(--border);">📦</span>`;
+
     return `
       <div class="dash-accordion">
         <div class="dash-accordion-header" onclick="this.parentElement.classList.toggle('open')">
-          <div class="dash-accordion-title">
+          <div class="dash-accordion-title" style="display:flex; align-items:center;">
             <span class="dash-accordion-stat">${batchDisplay}</span>
-            <div>
-              <div style="font-weight:600; font-size:15px;">${esc(productName)}</div>
-              <div style="font-size:12px; color:var(--muted);">${date}</div>
+            <div style="display:flex; align-items:center; margin-left:12px;">
+              ${imgHtml}
+              <div>
+                <div style="font-weight:600; font-size:15px;">${esc(productName)}</div>
+                <div style="font-size:12px; color:var(--muted);">${date}</div>
+              </div>
             </div>
           </div>
           <div style="display:flex; align-items:center; gap:16px;">
@@ -2511,8 +2447,8 @@ window.renderBatches = function() {
           </div>
         </div>
         <div class="dash-accordion-body">
-          <div class="dash-accordion-content" style="display:grid; grid-template-columns: 1.5fr 1fr; gap:40px;">
-            <div>
+          <div class="dash-accordion-content" style="padding:16px 24px;">
+            <div style="margin-bottom:16px;">
               <h4 style="font-size:12px; text-transform:uppercase; color:var(--muted); margin-bottom:12px;">Materials Used</h4>
               <table style="width:100%; border-collapse:collapse;">
                 <thead>
@@ -2528,10 +2464,8 @@ window.renderBatches = function() {
                 <tbody>${materialHtml}</tbody>
               </table>
             </div>
-            <div>
-              <h4 style="font-size:12px; text-transform:uppercase; color:var(--muted); margin-bottom:12px;">Production Timeline</h4>
-              ${stageHtml}
-              ${isAdmin ? `<button class="btn btn-danger btn-sm" style="margin-top:24px; width:100%;" onclick="deleteBatch('${b.id}')">Delete Record</button>` : ''}
+            <div style="display:flex; justify-content:flex-end;">
+              ${isAdmin ? `<button class="btn btn-danger btn-sm" style="max-width:150px; width:100%;" onclick="deleteBatch('${b.id}')">Delete Record</button>` : ''}
             </div>
           </div>
         </div>
@@ -2826,10 +2760,13 @@ window.renderSales = function() {
               ${g.items.map(s => {
                   const item = _items.find(i => i.id === s.item_id);
                   const name = item ? item.name : s.item_id;
+                  const imgHtml = item && item.image_url 
+                    ? `<img src="${esc(item.image_url)}" style="width:36px; height:36px; object-fit:contain; border-radius:4px; border:1px solid var(--border); margin-right:8px; vertical-align:middle;" />`
+                    : `<span style="display:inline-block; width:36px; height:36px; line-height:36px; text-align:center; background:var(--bg); border-radius:4px; margin-right:8px; vertical-align:middle; border:1px solid var(--border);">📦</span>`;
                   return `<tr>
                     <td style="width:16%;"></td>
                     <td style="width:16%;"></td>
-                    <td style="color:var(--text); font-size:13px;">↳ ${esc(name)}</td>
+                    <td style="color:var(--text); font-size:13px; display:flex; align-items:center; border:none; padding:8px 0;">↳ ${imgHtml} <span>${esc(name)}</span></td>
                     <td style="width:16%;">${fmtN(s.qty)}</td>
                     <td style="width:16%;">$${fmtP(s.unit_price || 0)}</td>
                     <td style="width:16%; color:var(--success);">$${fmtP(s.total_price || 0)}</td>
