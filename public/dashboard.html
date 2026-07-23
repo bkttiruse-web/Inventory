@@ -321,6 +321,7 @@
           
           <div class="reports-tabs" style="display:flex; gap:16px; border-bottom:1px solid var(--border); width:100%; background:var(--dark); padding:10px 20px; border-radius:12px 12px 0 0;">
             <button class="tab-btn active" style="background:none; border:none; padding-bottom:8px; border-bottom:2px solid var(--primary); font-weight:600; cursor:pointer; color:white;" onclick="switchReportTab('monthly', this)">Monthly Report</button>
+            <button class="tab-btn" style="background:none; border:none; padding-bottom:8px; border-bottom:2px solid transparent; font-weight:600; cursor:pointer; color:white;" onclick="switchReportTab('production', this)">Production Report</button>
           </div>
         </div>
 
@@ -364,6 +365,16 @@
               <table>
                 <thead><tr><th>Batch Number</th><th>Product Name</th><th>Produced Quantity</th><th>Date</th></tr></thead>
                 <tbody id="rep-product-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Production Report Content -->
+          <div id="rep-production" class="report-tab-content" style="display:none;">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Batch #</th><th>Product</th><th>Produced Qty</th><th>Start Date</th><th>To Date</th></tr></thead>
+                <tbody id="rep-production-tbody"></tbody>
               </table>
             </div>
           </div>

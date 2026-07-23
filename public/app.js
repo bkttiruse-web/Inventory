@@ -1720,7 +1720,26 @@ window.renderReports = function() {
       }
   }
 
-  // 5. Production Report removed from Reports page.
+  // 5. Production Report
+  const prodRepBody = document.getElementById('rep-production-tbody');
+  if (prodRepBody) {
+      if (monthlyBatches.length === 0) {
+          prodRepBody.innerHTML = '<tr><td colspan="5"><p class="empty-state">No production runs found for this month</p></td></tr>';
+      } else {
+          prodRepBody.innerHTML = monthlyBatches.map(b => {
+              const prod = _items.find(i => i.id === b.product_id || i.sku === b.product_id || i.name === b.product_id) || { name: b.product_id };
+              const sDate = b.start_date ? new Date(b.start_date).toLocaleDateString('en-GB') : '—';
+              const eDate = b.end_date ? new Date(b.end_date).toLocaleDateString('en-GB') : '—';
+              return `<tr>
+                  <td style="font-weight:bold;">#${b.batch_number}</td>
+                  <td>${esc(prod.name)}</td>
+                  <td>${b.produced_qty}</td>
+                  <td>${esc(sDate)}</td>
+                  <td>${esc(eDate)}</td>
+              </tr>`;
+          }).join('');
+      }
+  }
 }
 
 // ================================================================
