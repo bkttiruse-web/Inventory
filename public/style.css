@@ -1240,3 +1240,49 @@ tr.row-out:hover { background: #fee2e2; }
     font-size: 17px;
   }
 }
+
+/* =====================================================================
+   DARK MODE — SALES LOG DETAIL ROWS
+   ===================================================================== */
+
+/* The expanded sales detail rows use rgba(0,0,0,0.03) which becomes
+   transparent / white-on-white in dark mode. Override to use surface. */
+[data-theme="dark"] .sales-detail-row > td > table {
+  background: var(--surface) !important;
+}
+
+/* Ensure all text inside expanded sales rows is readable */
+[data-theme="dark"] .sales-detail-row td {
+  color: var(--text) !important;
+}
+
+/* Table cell borders inside nested table */
+[data-theme="dark"] .sales-detail-row > td > table tr td {
+  border-bottom: 1px solid var(--border);
+}
+
+/* td used with display:flex still needs color */
+[data-theme="dark"] .sales-detail-row td[style*="display:flex"] {
+  color: var(--text) !important;
+}
+
+/* =====================================================================
+   PRODUCTION ENTRY — CUSTOM IMAGE DROPDOWN
+   ===================================================================== */
+
+/* Trigger box hover state */
+#prod-product-trigger:hover {
+  border-color: var(--accent);
+  background: var(--bg);
+}
+
+/* Dropdown option hover via JS onmouseover uses var(--bg) which is
+   already theme-aware. This ensures the container renders correctly. */
+#prod-product-dropdown {
+  background: var(--surface);
+  color: var(--text);
+}
+
+#prod-product-dropdown div {
+  color: var(--text);
+}

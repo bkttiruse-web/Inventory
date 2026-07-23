@@ -1720,26 +1720,7 @@ window.renderReports = function() {
       }
   }
 
-  // 5. Production Report
-  const prodRepBody = document.getElementById('rep-production-tbody');
-  if (prodRepBody) {
-      if (monthlyBatches.length === 0) {
-          prodRepBody.innerHTML = '<tr><td colspan="5"><p class="empty-state">No production runs found for this month</p></td></tr>';
-      } else {
-          prodRepBody.innerHTML = monthlyBatches.map(b => {
-              const prod = _items.find(i => i.id === b.product_id || i.sku === b.product_id || i.name === b.product_id) || { name: b.product_id };
-              const sortedStages = (b.stages || []).slice().sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
-              const stageDetails = sortedStages.map(s => `<div><strong>${esc(s.stage_name)}:</strong> ${esc(s.start_date)} to ${esc(s.end_date)} <em style="color:var(--muted)">(${esc(s.duration)})</em></div>`).join('');
-              return `<tr>
-                  <td style="font-weight:bold;">#${b.batch_number}</td>
-                  <td>${esc(prod.name)}</td>
-                  <td>${b.produced_qty}</td>
-                  <td>${esc(b.total_duration)}</td>
-                  <td style="font-size:12px; line-height:1.5;">${stageDetails}</td>
-              </tr>`;
-          }).join('');
-      }
-  }
+  // 5. Production Report removed from Reports page.
 }
 
 // ================================================================
@@ -2161,22 +2142,51 @@ window.toggleBatchAccordion = function(id) {
 
 window.openProductionModal = function() {
   const modal = document.getElementById('productionModal');
-  const selectEl = document.getElementById('prod-product');
-  
-  // Populate product dropdown with images if available
+
+  // Pre-fill today's date
+  const dateEl = document.getElementById('prod-date');
+  if (dateEl && !dateEl.value) {
+    dateEl.value = new Date().toISOString().split('T')[0];
+  }
+
+  // Reset hidden product input and visual trigger
+  const hiddenInput = document.getElementById('prod-product');
+  if (hiddenInput) hiddenInput.value = '';
+  const triggerName = document.getElementById('prod-trigger-name');
+  if (triggerName) { triggerName.textContent = 'Select a product...'; triggerName.style.color = 'var(--muted)'; }
+  const triggerImg = document.getElementById('prod-trigger-img');
+  if (triggerImg) triggerImg.innerHTML = '📦';
+
+  // Build the custom image dropdown list
+  const dropdownEl = document.getElementById('prod-product-dropdown');
   const products = _items.filter(i => i.category === 'Products');
-  selectEl.innerHTML = '<option value="" disabled selected>Select a product...</option>' + 
-    products.map(p => `<option value="${esc(p.id)}">${esc(p.name)} (${esc(p.sku)})</option>`).join('');
+  if (dropdownEl) {
+    if (products.length === 0) {
+      dropdownEl.innerHTML = '<div style="padding:12px; color:var(--muted); font-size:13px;">No products found.</div>';
+    } else {
+      dropdownEl.innerHTML = products.map(p => {
+        const imgEl = p.image_url
+          ? `<img src="${esc(p.image_url)}" style="width:36px;height:36px;object-fit:contain;border-radius:4px;border:1px solid var(--border);background:#fff;flex-shrink:0;" />`
+          : `<span style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">📦</span>`;
+        return `<div onclick="selectProdProduct('${esc(p.id)}', '${esc(p.name)}', '${esc(p.sku)}', ${p.image_url ? `'${esc(p.image_url)}'` : 'null'})"
+          style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--border);transition:background 0.15s;"
+          onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='transparent'">
+          ${imgEl}
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--text);">${esc(p.name)}</div>
+            <div style="font-size:11px;color:var(--muted);">${esc(p.sku)}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+    dropdownEl.style.display = 'none';
+  }
 
-  // Reset basic info
-  selectEl.value = '';
-  const previewCont = document.getElementById('prod-product-preview-container');
-  if (previewCont) previewCont.style.display = 'none';
-
+  // Reset material rows
   const isAdmin = getSession()?.role === 'admin';
   document.getElementById('prod-summary-cost-container').style.display = isAdmin ? 'block' : 'none';
   document.getElementById('prod-summary-cost').textContent = '0.00 ETB';
-  
+
   const gridCols = isAdmin ? '2fr 1fr 1fr 1fr 30px' : '2fr 1fr 30px';
   const headerHtml = `<div style="display:grid; grid-template-columns: ${gridCols}; gap:8px; padding:0 0 8px 0; font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase;">
     <div>Type/color</div>
@@ -2184,36 +2194,50 @@ window.openProductionModal = function() {
     ${isAdmin ? '<div>Unit Cost</div><div>Total</div>' : ''}
     <div></div>
   </div>`;
-  
+
   document.getElementById('prod-trim-rows').innerHTML = headerHtml + '<div class="empty-placeholder" style="font-size:13px; color:var(--muted); padding:8px 0;">Click "+ Add Trim" to log trim usage.</div>';
   document.getElementById('prod-fabric-rows').innerHTML = headerHtml + '<div class="empty-placeholder" style="font-size:13px; color:var(--muted); padding:8px 0;">Click "+ Add Fabric" to log fabric usage.</div>';
-  
+
   updateProductionSummary();
   modal.classList.add('open');
 };
 
-window.updateProductionProductPreview = function() {
-  const selectEl = document.getElementById('prod-product');
-  const previewCont = document.getElementById('prod-product-preview-container');
-  const imgCont = document.getElementById('prod-product-preview-img');
-  const nameEl = document.getElementById('prod-product-preview-name');
-  const skuEl = document.getElementById('prod-product-preview-sku');
-  
-  if (!selectEl || !previewCont || !imgCont || !nameEl || !skuEl) return;
-  
-  const selectedId = selectEl.value;
-  const p = _items.find(i => i.id === selectedId);
-  
-  if (p) {
-    nameEl.textContent = p.name;
-    skuEl.textContent = p.sku;
-    imgCont.innerHTML = p.image_url 
-      ? `<img src="${esc(p.image_url)}" style="width:100%; height:100%; object-fit:contain;" />`
-      : `<span style="font-size: 24px;">📦</span>`;
-    previewCont.style.display = 'flex';
-  } else {
-    previewCont.style.display = 'none';
+window.toggleProdDropdown = function() {
+  const dd = document.getElementById('prod-product-dropdown');
+  if (!dd) return;
+  const isOpen = dd.style.display !== 'none';
+  dd.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) {
+    // Close when clicking outside
+    setTimeout(() => {
+      const handler = (e) => {
+        if (!document.getElementById('prod-product-trigger')?.contains(e.target) &&
+            !dd.contains(e.target)) {
+          dd.style.display = 'none';
+          document.removeEventListener('click', handler);
+        }
+      };
+      document.addEventListener('click', handler);
+    }, 0);
   }
+};
+
+window.selectProdProduct = function(id, name, sku, imageUrl) {
+  const hiddenInput = document.getElementById('prod-product');
+  if (hiddenInput) hiddenInput.value = id;
+
+  const triggerName = document.getElementById('prod-trigger-name');
+  if (triggerName) { triggerName.textContent = name + ' (' + sku + ')'; triggerName.style.color = 'var(--text)'; }
+
+  const triggerImg = document.getElementById('prod-trigger-img');
+  if (triggerImg) {
+    triggerImg.innerHTML = imageUrl
+      ? `<img src="${esc(imageUrl)}" style="width:32px;height:32px;object-fit:contain;border-radius:4px;border:1px solid var(--border);" />`
+      : '📦';
+  }
+
+  const dd = document.getElementById('prod-product-dropdown');
+  if (dd) dd.style.display = 'none';
 };
 
 window.closeProductionModal = function() {
@@ -2311,7 +2335,11 @@ function formatDuration(d1, d2) {
 window.saveProduction = async function() {
   const productId = document.getElementById('prod-product').value;
   const producedQty = parseInt(document.getElementById('prod-qty').value);
-  if (!productId || !producedQty) return showToast('Please enter a product and quantity', 'error');
+  const prodDate = document.getElementById('prod-date')?.value;
+
+  if (!productId) return showToast('Please select a product', 'error');
+  if (!producedQty || producedQty < 1) return showToast('Please enter a valid quantity', 'error');
+  if (!prodDate) return showToast('Please enter a production date', 'error');
 
   const materials = [];
   document.querySelectorAll('#prod-trim-rows .prod-material-row').forEach(row => {
@@ -2353,7 +2381,7 @@ window.saveProduction = async function() {
     const res = await fetch('/api/batches', {
       method: 'POST',
       headers: apiHeaders(),
-      body: JSON.stringify({ product_id: productId, produced_qty: producedQty, total_duration: 'N/A', materials, stages: [] })
+      body: JSON.stringify({ product_id: productId, produced_qty: producedQty, total_duration: 'N/A', materials, stages: [], production_date: prodDate })
     });
     if (!res.ok) {
       const errorData = await res.json();
@@ -2744,32 +2772,39 @@ window.renderSales = function() {
       const date = new Date(g.ts).toLocaleString('en-GB');
       const gId = 'sg-' + idx;
       
+      // Calculate unit price representation for summary row
+      let summaryUnitPrice = '—';
+      if (g.items.length === 1) {
+          summaryUnitPrice = '$' + fmtP(g.items[0].unit_price || 0);
+      }
+
       let html = `<tr style="cursor:pointer;" onclick="const e = document.getElementById('${gId}'); const b = this.querySelector('.sg-btn'); if(e.style.display==='none'){e.style.display='table-row';b.textContent='▲';this.style.background='var(--hover)';}else{e.style.display='none';b.textContent='▼';this.style.background='';}">
         <td>${date}</td>
         <td style="font-weight:600;">${esc(g.buyer)}</td>
         <td>${g.items.length} Product(s) <span class="sg-btn" style="font-size:10px; color:var(--muted); margin-left:4px;">▼</span></td>
         <td style="font-weight:600;">${fmtN(g.totalQty)}</td>
-        <td style="color:var(--muted)">—</td>
+        <td style="font-weight:600;">${summaryUnitPrice}</td>
         <td style="font-weight:600; color:var(--success);">$${fmtP(g.totalPrice)}</td>
       </tr>`;
       
-      html += `<tr id="${gId}" style="display:none; background:#fafafa;">
-        <td colspan="6" style="padding:0;">
-          <table style="width:100%; margin:0; background:transparent; border-top:1px solid var(--border);">
+      // Expandable section with matching table columns structure and no hardcoded light background
+      html += `<tr id="${gId}" style="display:none;" class="sales-detail-row">
+        <td colspan="6" style="padding:0; border:none;">
+          <table style="width:100%; margin:0; background:rgba(0,0,0,0.03); border-collapse:collapse; border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
             <tbody>
               ${g.items.map(s => {
                   const item = _items.find(i => i.id === s.item_id);
                   const name = item ? item.name : s.item_id;
                   const imgHtml = item && item.image_url 
-                    ? `<img src="${esc(item.image_url)}" style="width:36px; height:36px; object-fit:contain; border-radius:4px; border:1px solid var(--border); margin-right:8px; vertical-align:middle;" />`
+                    ? `<img src="${esc(item.image_url)}" style="width:36px; height:36px; object-fit:contain; border-radius:4px; border:1px solid var(--border); margin-right:8px; vertical-align:middle; background:#fff;" />`
                     : `<span style="display:inline-block; width:36px; height:36px; line-height:36px; text-align:center; background:var(--bg); border-radius:4px; margin-right:8px; vertical-align:middle; border:1px solid var(--border);">📦</span>`;
                   return `<tr>
-                    <td style="width:16%;"></td>
-                    <td style="width:16%;"></td>
-                    <td style="color:var(--text); font-size:13px; display:flex; align-items:center; border:none; padding:8px 0;">↳ ${imgHtml} <span>${esc(name)}</span></td>
-                    <td style="width:16%;">${fmtN(s.qty)}</td>
-                    <td style="width:16%;">$${fmtP(s.unit_price || 0)}</td>
-                    <td style="width:16%; color:var(--success);">$${fmtP(s.total_price || 0)}</td>
+                    <td style="width:16.66%; border:none;"></td>
+                    <td style="width:16.66%; border:none;"></td>
+                    <td style="width:16.66%; color:var(--text); font-size:13px; display:flex; align-items:center; border:none; padding:8px 12px; box-sizing:border-box;">↳ ${imgHtml} <span>${esc(name)}</span></td>
+                    <td style="width:16.66%; border:none; padding:8px 12px; font-weight:600; color:var(--text);">${fmtN(s.qty)}</td>
+                    <td style="width:16.66%; border:none; padding:8px 12px; color:var(--text); font-weight:600;">$${fmtP(s.unit_price || 0)}</td>
+                    <td style="width:16.66%; border:none; padding:8px 12px; color:var(--success); font-weight:600;">$${fmtP(s.total_price || 0)}</td>
                   </tr>`;
               }).join('')}
             </tbody>
